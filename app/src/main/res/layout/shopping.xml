@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- MAIN ACTION BAR - Layout, Position-->
+    <LinearLayout
+        android:id="@+id/main_action_bar"
+
+        android:gravity="center"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:orientation="horizontal"
+
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- MAIN SHOPPING - Layout, Font -->
+        <TextView
+            android:id="@+id/shopping"
+            android:text="@string/shopping"
+
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+
+            android:padding="5dp"
+            android:textColor="#ff8000"
+            android:textSize="25sp"
+            android:textStyle="bold"/>
+
+        <!-- SEPARATOR - Layout, Font -->
+        <TextView
+            android:text="@string/separator"
+
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+
+            android:padding="3dp"
+            android:textColor="#dc6500"
+            android:textSize="20sp"
+            android:textStyle="bold"/>
+
+        <!-- COMPLETE  - Layout, Font, Interact-->
+        <TextView
+            android:id="@+id/complete"
+            android:text="@string/complete"
+
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+
+            android:padding="5dp"
+            android:textColor="#dc6500"
+            android:textSize="15sp"
+
+            android:clickable="true"
+            android:focusable="true"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/main_action_bar"
+        app:layout_constraintVertical_bias="1.0">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- SEARCH - Layout, Design, Font-->
+            <EditText
+                android:id="@+id/search"
+
+                android:layout_width="match_parent"
+                android:layout_height="37dp"
+                android:layout_marginStart="5dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="5dp"
+                android:background="@drawable/search_background"
+
+                android:hint="@string/search"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:padding="10dp"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#666666"
+
+                android:textSize="15sp" />
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

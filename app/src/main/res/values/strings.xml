@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">shopping list</string>
+
+    <string name="shopping">Shopping list</string>
+    <string name="complete">Complete list</string>
+    <string name="separator">•</string>
+    <string name="search">Search</string>
+
+    <string name="sort_alphabetically">Sort Alphabetically</string>
+    <string name="s2">|</string>
+    <string name="add_place">+ Place</string>
+    <string name="expand_place">Place</string>
+</resources>
