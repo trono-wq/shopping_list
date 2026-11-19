@@ -1,13 +1,36 @@
 <resources>
     <string name="app_name">shopping list</string>
 
-    <string name="shopping">Shopping list</string>
-    <string name="complete">Complete list</string>
-    <string name="separator">•</string>
-    <string name="search">Search</string>
+    <string name="a_shopping">      Shopping list</string>
+    <string name="a_complete">      Complete list</string>
+    <string name="a_separator">     •</string>
+    <string name="a_s2">            |</string>
+    <string name="a_search">        Search</string>
+    <string name="a_p_expand">      v</string>
+    <string name="a_c_expand">      v</string>
+    <string name="a_i_expand">      v</string>
+    <string name="a_p_name">        Place</string>
+    <string name="a_c_name">        Category</string>
+    <string name="a_i_name">        Item</string>
+    <string name="a_b_brand">       Brand</string>
+    <string name="a_b_name">        Name</string>
+    <string name="a_b_weight">      Weight</string>
+    <string name="a_b_quantity">    Quantity</string>
 
-    <string name="sort_alphabetically">Sort Alphabetically</string>
-    <string name="s2">|</string>
-    <string name="add_place">+ Place</string>
-    <string name="expand_place">Place</string>
+    <string name="c_edit">          Edit</string>
+    <string name="c_p_sort">        Sort alphabetically</string>
+    <string name="c_c_sort">        Sort alphabetically</string>
+    <string name="c_i_sort">        Sort alphabetically</string>
+    <string name="c_p_add">         +</string>
+    <string name="c_c_add">         +</string>
+    <string name="c_i_add">         +</string>
+    <string name="c_i_b_add">       +</string>
+    <string name="c_p_add_list">    Add to list</string>
+    <string name="c_c_add_list">    Add to list</string>
+    <string name="c_i_add_list">    Add to list</string>
+
+    <string name="s_edit">          Edit</string>
+    <string name="s_p_box">         </string>
+    <string name="s_c_box">         </string>
+    <string name="s_i_box">         </string>
 </resources>

@@ -3,96 +3,379 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/black">
 
-    <!-- MAIN ACTION BAR - Layout, Position-->
     <LinearLayout
-        android:id="@+id/main_action_bar"
+        android:id="@+id/top_section"
 
-        android:gravity="center"
+        android:gravity="start"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        android:orientation="horizontal"
-
+        android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <!-- MAIN SHOPPING - Layout, Font -->
-        <TextView
-            android:id="@+id/shopping"
-            android:text="@string/shopping"
-
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-
-            android:padding="5dp"
-            android:textColor="#ff8000"
-            android:textSize="25sp"
-            android:textStyle="bold"/>
-
-        <!-- SEPARATOR - Layout, Font -->
-        <TextView
-            android:text="@string/separator"
-
+        <LinearLayout
+            android:id="@+id/action_bar"
+            android:gravity="center"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
-            android:padding="3dp"
-            android:textColor="#dc6500"
-            android:textSize="20sp"
-            android:textStyle="bold"/>
+            <TextView
+                android:id="@+id/a_shopping"
+                android:text="@string/a_shopping"
 
-        <!-- COMPLETE  - Layout, Font, Interact-->
-        <TextView
-            android:id="@+id/complete"
-            android:text="@string/complete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:textColor="#ff8000"
+                android:textSize="25sp"
+                android:textStyle="bold"/>
 
+            <TextView
+                android:text="@string/a_separator"
+
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:padding="3dp"
+                android:textColor="#dc6500"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/a_complete"
+                android:text="@string/a_complete"
+
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:padding="5dp"
+                android:textColor="#dc6500"
+                android:textSize="15sp"
+                android:clickable="true"
+                android:focusable="true"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/search_bar"
+
+            android:gravity="center"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
+            android:orientation="horizontal">
 
-            android:padding="5dp"
-            android:textColor="#dc6500"
-            android:textSize="15sp"
+            <EditText
+                android:id="@+id/a_search"
+                android:background="@drawable/search_background"
+                android:hint="@string/a_search"
 
-            android:clickable="true"
-            android:focusable="true"/>
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:layout_marginStart="5dp"
+                android:layout_marginEnd="5dp"
+                android:padding="10dp"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:textColorHint="#999999"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"/>
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/s_edit"
+                android:text="@string/s_edit"
+
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:backgroundTint="#666666"/>
+        </LinearLayout>
     </LinearLayout>
 
     <ScrollView
         android:id="@+id/scroll_view"
-        android:layout_width="0dp"
+
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        android:layout_marginTop="20dp"
+        android:fillViewport="true"
+
+        app:layout_constraintTop_toBottomOf="@id/top_section"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_action_bar"
-        app:layout_constraintVertical_bias="1.0">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
+            android:id="@+id/scroll"
+
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- SEARCH - Layout, Design, Font-->
-            <EditText
-                android:id="@+id/search"
+            <LinearLayout
+                android:id="@+id/place_section"
 
                 android:layout_width="match_parent"
-                android:layout_height="37dp"
-                android:layout_marginStart="5dp"
-                android:layout_marginTop="10dp"
-                android:layout_marginEnd="5dp"
-                android:background="@drawable/search_background"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-                android:hint="@string/search"
-                android:importantForAutofill="no"
-                android:inputType="text"
-                android:padding="10dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#666666"
+                <LinearLayout
+                    android:id="@+id/place_bar"
 
-                android:textSize="15sp" />
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/a_p_expand"
+
+                        android:layout_width="35dp"
+                        android:layout_height="40dp"
+                        android:backgroundTint="#666666"
+                        android:text="@string/a_p_expand"
+                        android:textSize="20sp"
+                        android:textColor="#1d1b20"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"
+                        android:layout_marginStart="5dp"/>
+
+                    <TextView
+                        android:id="@+id/a_p_name"
+                        android:text="@string/a_p_name"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_weight="1"/>
+
+                    <androidx.appcompat.widget.AppCompatCheckBox
+                        android:id="@+id/s_p_box"
+
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:backgroundTint="#666666"
+                        android:textColor="#1d1b20"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/category_section"
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="20dp"
+                android:layout_marginStart="10dp">
+
+
+
+                <LinearLayout
+                    android:id="@+id/category_bar"
+
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/a_c_expand"
+
+                        android:layout_width="35dp"
+                        android:layout_height="40dp"
+                        android:backgroundTint="#666666"
+                        android:text="@string/a_p_expand"
+                        android:textSize="20sp"
+                        android:textColor="#1d1b20"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"
+                        android:layout_marginStart="5dp"/>
+
+                    <TextView
+                        android:id="@+id/a_c_name"
+                        android:text="@string/a_c_name"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_weight="1"/>
+
+                    <androidx.appcompat.widget.AppCompatCheckBox
+                        android:id="@+id/s_c_box"
+
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:backgroundTint="#666666"
+                        android:textColor="#1d1b20"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"/>
+
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/item_section"
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="20dp"
+                android:layout_marginStart="20dp">
+
+                <LinearLayout
+                    android:id="@+id/item_bar"
+
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/a_i_expand"
+
+                        android:layout_width="35dp"
+                        android:layout_height="40dp"
+                        android:backgroundTint="#666666"
+                        android:text="@string/a_p_expand"
+                        android:textSize="20sp"
+                        android:textColor="#1d1b20"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"
+                        android:layout_marginStart="5dp"/>
+
+                    <TextView
+                        android:id="@+id/a_i_name"
+                        android:text="@string/a_i_name"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#FFFFFF"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_weight="1"/>
+
+                    <androidx.appcompat.widget.AppCompatCheckBox
+                        android:id="@+id/s_i_box"
+
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:backgroundTint="#666666"
+                        android:textColor="#1d1b20"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/item_brand_bar"
+
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginStart="10dp">
+
+                    <TextView
+                        android:text="@string/a_separator"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:id="@+id/a_b_brand"
+                        android:text="@string/a_b_brand"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="15sp"/>
+
+                    <TextView
+                        android:text="@string/a_s2"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="20sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:id="@+id/a_b_name"
+                        android:text="@string/a_b_name"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="15sp"/>
+
+                    <TextView
+                        android:text="@string/a_s2"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="20sp"
+                        android:textStyle="bold"/>
+
+
+                    <TextView
+                        android:id="@+id/a_b_weight"
+                        android:text="@string/a_b_weight"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="15sp"/>
+
+                    <TextView
+                        android:text="@string/a_s2"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="20sp"
+                        android:textStyle="bold"/>
+
+
+                    <TextView
+                        android:id="@+id/a_b_quantity"
+                        android:text="@string/a_b_quantity"
+
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="5dp"
+                        android:textColor="#999999"
+                        android:textSize="15sp"/>
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -34,7 +34,7 @@ class Shopping : AppCompatActivity() {
             insets
         }
 
-        findViewById<TextView>(R.id.complete).setOnClickListener {
+        findViewById<TextView>(R.id.a_complete).setOnClickListener {
             startActivity(Intent(this, Complete::class.java))
 
 
