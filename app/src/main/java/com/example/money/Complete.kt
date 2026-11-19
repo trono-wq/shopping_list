@@ -1,12 +1,11 @@
+
 package com.example.shoppinglist
 
+import android.app.AlertDialog
 import android.graphics.Color
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
-import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
-import android.content.Context
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -43,15 +42,6 @@ class Complete : AppCompatActivity() {
     private lateinit var placeName: TextView
     private lateinit var categoryName: TextView
     private lateinit var itemName: TextView
-
-    // ACTIVE NAME EDITOR
-
-    private var activeInput: EditText? = null
-    private var activeTextView: TextView? = null
-    private var activeParent: ViewGroup? = null
-    private var activeIndex = -1
-    private var activeLayoutParams: ViewGroup.LayoutParams? = null
-    private var activeOnChanged: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -127,7 +117,6 @@ class Complete : AppCompatActivity() {
         editButton.setOnClickListener {
 
             if (!editMode) {
-
                 editMode = true
 
                 placeChanged = false
@@ -140,14 +129,7 @@ class Complete : AppCompatActivity() {
 
             } else {
 
-                // FINISH CURRENT NAME EDITING FIRST
-
-                finishNameEditing()
-
-                // SAVE CHANGES
-
                 if (hasChanges()) {
-
                     dataPreferences.edit()
                         .putString("place_name", placeName.text.toString())
                         .putString("category_name", categoryName.text.toString())
@@ -170,13 +152,9 @@ class Complete : AppCompatActivity() {
         // PLACE NAME
 
         placeName.setOnClickListener {
-
             if (editMode) {
-
                 editName(placeName, "Place") {
-
                     placeChanged = true
-
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -186,13 +164,9 @@ class Complete : AppCompatActivity() {
         // CATEGORY NAME
 
         categoryName.setOnClickListener {
-
             if (editMode) {
-
                 editName(categoryName, "Category") {
-
                     categoryChanged = true
-
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -202,13 +176,9 @@ class Complete : AppCompatActivity() {
         // ITEM NAME
 
         itemName.setOnClickListener {
-
             if (editMode) {
-
                 editName(itemName, "Item") {
-
                     itemChanged = true
-
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -218,7 +188,6 @@ class Complete : AppCompatActivity() {
         // PLACE DROPDOWN
 
         findViewById<View>(R.id.a_p_expand).setOnClickListener {
-
             placeExpanded = !placeExpanded
 
             statePreferences.edit()
@@ -231,7 +200,6 @@ class Complete : AppCompatActivity() {
         // CATEGORY DROPDOWN
 
         findViewById<View>(R.id.a_c_expand).setOnClickListener {
-
             categoryExpanded = !categoryExpanded
 
             statePreferences.edit()
@@ -244,7 +212,6 @@ class Complete : AppCompatActivity() {
         // ITEM DROPDOWN
 
         findViewById<View>(R.id.a_i_expand).setOnClickListener {
-
             itemExpanded = !itemExpanded
 
             statePreferences.edit()
@@ -275,193 +242,31 @@ class Complete : AppCompatActivity() {
         onChanged: () -> Unit
     ) {
 
-        // FINISH ANY PREVIOUS NAME EDIT
-
-        finishNameEditing()
-
-        val parent = textView.parent as? ViewGroup ?: return
-        val index = parent.indexOfChild(textView)
-
-        if (index == -1) return
-
-        val layoutParams = textView.layoutParams
-
         val input = EditText(this).apply {
-
-            id = textView.id
             setText(textView.text)
-            setSelection(textView.text.length)
-
+            setSelection(text.length)
             this.hint = hint
-
             setTextColor(white)
             setHintTextColor(muted)
-
-            textSize = textView.textSize /
-                    resources.displayMetrics.scaledDensity
-
-            typeface = textView.typeface
-            gravity = textView.gravity
-
-            setPadding(
-                textView.paddingLeft,
-                textView.paddingTop,
-                textView.paddingRight,
-                textView.paddingBottom
-            )
-
-            setSingleLine(true)
-            background = null
-
+            textSize = 18f
             inputType = InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }
 
-        // REPLACE TEXTVIEW WITH EDITTEXT
+        AlertDialog.Builder(this)
+            .setTitle("Edit $hint")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
 
-        parent.removeViewAt(index)
-        parent.addView(input, index, layoutParams)
+                val newName = input.text.toString().trim()
 
-        // TRACK ACTIVE EDITOR
-
-        activeInput = input
-        activeTextView = textView
-        activeParent = parent
-        activeIndex = index
-        activeLayoutParams = layoutParams
-        activeOnChanged = onChanged
-
-        // DETECT CHANGES WHILE TYPING
-
-        input.addTextChangedListener(object : android.text.TextWatcher {
-
-            override fun beforeTextChanged(
-                s: CharSequence?,
-                start: Int,
-                count: Int,
-                after: Int
-            ) {}
-
-            override fun onTextChanged(
-                s: CharSequence?,
-                start: Int,
-                before: Int,
-                count: Int
-            ) {
-
-                val newName = s.toString().trim()
-                val oldName = textView.text.toString()
-
-                val changed = newName.isNotEmpty() && newName != oldName
-
-                when (textView.id) {
-
-                    R.id.a_p_name -> placeChanged = changed
-                    R.id.a_c_name -> categoryChanged = changed
-                    R.id.a_i_name -> itemChanged = changed
+                if (newName.isNotEmpty()) {
+                    textView.text = newName
+                    onChanged()
                 }
-
-                updateNameColors()
-                updateSaveButton()
             }
-
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
-
-        // FOCUS AND KEYBOARD
-
-        input.setOnFocusChangeListener { _, hasFocus ->
-
-            if (!hasFocus && activeInput === input) {
-                finishNameEditing()
-            }
-        }
-
-        input.setOnEditorActionListener { _, _, _ ->
-
-            finishNameEditing()
-            true
-        }
-
-        input.requestFocus()
-
-        input.post {
-
-            if (activeInput === input && input.hasFocus()) {
-
-                val imm = getSystemService(
-                    Context.INPUT_METHOD_SERVICE
-                ) as InputMethodManager
-
-                imm.showSoftInput(
-                    input,
-                    InputMethodManager.SHOW_IMPLICIT
-                )
-            }
-        }
-    }
-
-    // FINISH NAME EDITING
-
-    private fun finishNameEditing() {
-
-        val input = activeInput ?: return
-        val textView = activeTextView ?: return
-        val parent = activeParent ?: return
-        val index = activeIndex
-        val layoutParams = activeLayoutParams
-        val onChanged = activeOnChanged
-
-        // CLEAR ACTIVE EDITOR FIRST
-
-        activeInput = null
-        activeTextView = null
-        activeParent = null
-        activeIndex = -1
-        activeLayoutParams = null
-        activeOnChanged = null
-
-        // GET NEW NAME
-
-        val newName = input.text.toString().trim()
-        val oldName = textView.text.toString()
-
-        // UPDATE ONLY IF NAME IS NOT EMPTY
-
-        if (newName.isNotEmpty() && newName != oldName) {
-
-            textView.text = newName
-            onChanged?.invoke()
-        }
-
-        // HIDE KEYBOARD AND CLEAR FOCUS
-
-        val imm = getSystemService(
-            Context.INPUT_METHOD_SERVICE
-        ) as InputMethodManager
-
-        imm.hideSoftInputFromWindow(input.windowToken, 0)
-
-        input.clearFocus()
-
-        window.decorView.clearFocus()
-
-        // RESTORE ORIGINAL TEXTVIEW
-
-        input.setOnFocusChangeListener(null)
-
-        val currentIndex = parent.indexOfChild(input)
-
-        if (currentIndex != -1) {
-
-            parent.removeView(input)
-
-            parent.addView(
-                textView,
-                currentIndex,
-                layoutParams
-            )
-        }
+            .show()
     }
 
     // CHANGE NAME COLORS
@@ -469,11 +274,9 @@ class Complete : AppCompatActivity() {
     private fun updateNameColors() {
 
         if (!editMode) {
-
             placeName.setTextColor(white)
             categoryName.setTextColor(white)
             itemName.setTextColor(white)
-
             return
         }
 
@@ -493,7 +296,6 @@ class Complete : AppCompatActivity() {
     // SAVE BUTTON COLOR
 
     private fun hasChanges(): Boolean {
-
         return placeChanged || categoryChanged || itemChanged
     }
 
@@ -527,10 +329,6 @@ class Complete : AppCompatActivity() {
             } else {
                 View.GONE
             }
-
-        // UPDATE DROPDOWN SYMBOLS
-
-        updateDropdownSymbols()
     }
 
     // EDIT MODE VISIBILITY
@@ -560,19 +358,5 @@ class Complete : AppCompatActivity() {
         findViewById<View>(R.id.c_p_add_list).visibility = visibility
         findViewById<View>(R.id.c_c_add_list).visibility = visibility
         findViewById<View>(R.id.c_i_add_list).visibility = visibility
-    }
-
-    // UPDATE DROPDOWN SYMBOLS
-
-    private fun updateDropdownSymbols() {
-
-        findViewById<TextView>(R.id.a_p_expand).text =
-            if (placeExpanded) "Ʌ" else "V"
-
-        findViewById<TextView>(R.id.a_c_expand).text =
-            if (categoryExpanded) "Ʌ" else "V"
-
-        findViewById<TextView>(R.id.a_i_expand).text =
-            if (itemExpanded) "Ʌ" else "V"
     }
 }
