@@ -229,7 +229,7 @@
                     android:gravity="center_vertical">
 
                     <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/c_c_sort_"
+                        android:id="@+id/c_c_sort"
                         android:text="@string/c_c_sort"
 
                         android:layoutDirection="rtl"
@@ -316,8 +316,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="20dp"
-                android:layout_marginStart="20dp">
+                android:layout_marginTop="20dp">
 
                 <LinearLayout
                     android:id="@+id/edit_item_bar"
@@ -325,7 +324,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:layout_marginStart="20dp">
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/c_i_sort"
@@ -362,7 +362,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:layout_marginStart="5dp">
+                    android:layout_marginStart="25dp">
 
                     <androidx.appcompat.widget.AppCompatButton
                         android:id="@+id/a_i_expand"
@@ -407,96 +407,102 @@
                         android:layout_gravity="center_vertical"/>
                 </LinearLayout>
 
-                <LinearLayout
+                <TableLayout
                     android:id="@+id/item_brand_bar"
 
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginStart="10dp">
+                    android:layout_gravity="center_horizontal"
+                    android:stretchColumns="0,2,4,6">
 
-                    <TextView
-                        android:text="@string/a_separator"
+                    <TableRow
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp"
+                        android:fillViewport="true"
+                        app:layout_constraintTop_toBottomOf="@id/item_bar"
+                        >
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="15sp"
-                        android:textStyle="bold"/>
+                        <TextView
+                            android:id="@+id/a_b_brand"
+                            android:text="@string/a_b_brand"
 
-                    <TextView
-                        android:id="@+id/a_b_brand"
-                        android:text="@string/a_b_brand"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:padding="5dp"
+                            android:gravity="center"
+                            android:textColor="#999999"
+                            android:textSize="15sp"/>
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="15sp"/>
+                        <TextView
+                            android:text="@string/a_s2"
 
-                    <TextView
-                        android:text="@string/a_s2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="5dp"
+                            android:textColor="#999999"
+                            android:textSize="20sp"
+                            android:textStyle="bold"/>
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="20sp"
-                        android:textStyle="bold"/>
+                        <TextView
+                            android:id="@+id/a_b_name"
+                            android:text="@string/a_b_name"
 
-                    <TextView
-                        android:id="@+id/a_b_name"
-                        android:text="@string/a_b_name"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:padding="5dp"
+                            android:gravity="center"
+                            android:textColor="#999999"
+                            android:textSize="15sp"/>
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="15sp"/>
+                        <TextView
+                            android:text="@string/a_s2"
 
-                    <TextView
-                        android:text="@string/a_s2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="5dp"
+                            android:textColor="#999999"
+                            android:textSize="20sp"
+                            android:textStyle="bold"/>
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="20sp"
-                        android:textStyle="bold"/>
+                        <TextView
+                            android:id="@+id/a_b_weight"
+                            android:text="@string/a_b_weight"
 
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:padding="5dp"
+                            android:gravity="center"
+                            android:textColor="#999999"
+                            android:textSize="15sp"/>
 
-                    <TextView
-                        android:id="@+id/a_b_weight"
-                        android:text="@string/a_b_weight"
+                        <TextView
+                            android:text="@string/a_s2"
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="15sp"/>
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="5dp"
+                            android:textColor="#999999"
+                            android:textSize="20sp"
+                            android:textStyle="bold"/>
 
-                    <TextView
-                        android:text="@string/a_s2"
+                        <TextView
+                            android:id="@+id/a_b_quantity"
+                            android:text="@string/a_b_quantity"
 
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="20sp"
-                        android:textStyle="bold"/>
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:padding="5dp"
+                            android:gravity="center"
+                            android:textColor="#999999"
+                            android:textSize="15sp"/>
 
+                    </TableRow>
 
-                    <TextView
-                        android:id="@+id/a_b_quantity"
-                        android:text="@string/a_b_quantity"
-
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#999999"
-                        android:textSize="15sp"/>
-                </LinearLayout>
+                </TableLayout>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

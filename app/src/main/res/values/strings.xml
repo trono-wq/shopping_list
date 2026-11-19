@@ -12,10 +12,10 @@
     <string name="a_p_name">        Place</string>
     <string name="a_c_name">        Category</string>
     <string name="a_i_name">        Item</string>
-    <string name="a_b_brand">       Brand</string>
-    <string name="a_b_name">        Name</string>
-    <string name="a_b_weight">      Weight</string>
-    <string name="a_b_quantity">    Quantity</string>
+    <string name="a_b_brand">       BRAND</string>
+    <string name="a_b_name">        NAME</string>
+    <string name="a_b_weight">      WEIGHT</string>
+    <string name="a_b_quantity">    QUANTITY</string>
 
     <string name="c_edit">          Edit</string>
     <string name="c_p_sort">        Sort alphabetically</string>
