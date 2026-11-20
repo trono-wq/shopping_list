@@ -2,23 +2,25 @@
 package com.example.shoppinglist
 
 import android.app.AlertDialog
+import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.text.InputType
+import android.util.SparseIntArray
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.ViewCompat
 
 class Complete : AppCompatActivity() {
 
-    private var placeExpanded = false
-    private var categoryExpanded = false
-    private var itemExpanded = false
     private var editMode = false
 
     private var placeChanged = false
@@ -38,10 +40,25 @@ class Complete : AppCompatActivity() {
         getSharedPreferences("complete_list_data", MODE_PRIVATE)
     }
 
+    private lateinit var scroll: LinearLayout
     private lateinit var editButton: AppCompatButton
+
+    private lateinit var originalGroup: GroupUi
+
     private lateinit var placeName: TextView
     private lateinit var categoryName: TextView
     private lateinit var itemName: TextView
+
+    private data class GroupUi(
+        val root: LinearLayout,
+        val idMap: SparseIntArray,
+        val isOriginal: Boolean,
+        var placeExpanded: Boolean = false,
+        var categoryExpanded: Boolean = false,
+        var itemExpanded: Boolean = false
+    )
+
+    private val groups = mutableListOf<GroupUi>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,14 +90,40 @@ class Complete : AppCompatActivity() {
             insets
         }
 
+        findViewById<TextView>(R.id.a_shopping).setOnClickListener {
+            finish()
+        }
+
+        scroll = findViewById(R.id.scroll)
         editButton = findViewById(R.id.c_edit)
 
-        placeName = findViewById(R.id.a_p_name)
-        categoryName = findViewById(R.id.a_c_name)
-        itemName = findViewById(R.id.a_i_name)
+        // ORIGINAL GROUP
+        val originalRoot = findViewById<LinearLayout>(R.id.group)
+
+        originalGroup = setupGroup(
+            root = originalRoot,
+            idMap = SparseIntArray(),
+            isOriginal = true
+        )
+
+        groups.add(originalGroup)
+
+        placeName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_p_name
+        )!!
+
+        categoryName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_c_name
+        )!!
+
+        itemName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_i_name
+        )!!
 
         // LOAD SAVED NAMES
-
         placeName.text = dataPreferences.getString(
             "place_name",
             placeName.text.toString()
@@ -97,26 +140,22 @@ class Complete : AppCompatActivity() {
         )
 
         // LOAD SAVED EXPANSION STATES
+        originalGroup.placeExpanded =
+            statePreferences.getBoolean("place_expanded", false)
 
-        placeExpanded = statePreferences.getBoolean(
-            "place_expanded", false
-        )
+        originalGroup.categoryExpanded =
+            statePreferences.getBoolean("category_expanded", false)
 
-        categoryExpanded = statePreferences.getBoolean(
-            "category_expanded", false
-        )
+        originalGroup.itemExpanded =
+            statePreferences.getBoolean("item_expanded", false)
 
-        itemExpanded = statePreferences.getBoolean(
-            "item_expanded", false
-        )
-
-        updateExpansionVisibility()
+        updateAllExpansionVisibility()
 
         // EDIT / SAVE
-
         editButton.setOnClickListener {
 
             if (!editMode) {
+
                 editMode = true
 
                 placeChanged = false
@@ -130,6 +169,7 @@ class Complete : AppCompatActivity() {
             } else {
 
                 if (hasChanges()) {
+
                     dataPreferences.edit()
                         .putString("place_name", placeName.text.toString())
                         .putString("category_name", categoryName.text.toString())
@@ -150,11 +190,14 @@ class Complete : AppCompatActivity() {
         }
 
         // PLACE NAME
-
         placeName.setOnClickListener {
+
             if (editMode) {
+
                 editName(placeName, "Place") {
+
                     placeChanged = true
+
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -162,11 +205,14 @@ class Complete : AppCompatActivity() {
         }
 
         // CATEGORY NAME
-
         categoryName.setOnClickListener {
+
             if (editMode) {
+
                 editName(categoryName, "Category") {
+
                     categoryChanged = true
+
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -174,68 +220,289 @@ class Complete : AppCompatActivity() {
         }
 
         // ITEM NAME
-
         itemName.setOnClickListener {
+
             if (editMode) {
+
                 editName(itemName, "Item") {
+
                     itemChanged = true
+
                     updateNameColors()
                     updateSaveButton()
                 }
             }
         }
 
-        // PLACE DROPDOWN
-
-        findViewById<View>(R.id.a_p_expand).setOnClickListener {
-            placeExpanded = !placeExpanded
-
-            statePreferences.edit()
-                .putBoolean("place_expanded", placeExpanded)
-                .apply()
-
-            updateExpansionVisibility()
-        }
-
-        // CATEGORY DROPDOWN
-
-        findViewById<View>(R.id.a_c_expand).setOnClickListener {
-            categoryExpanded = !categoryExpanded
-
-            statePreferences.edit()
-                .putBoolean("category_expanded", categoryExpanded)
-                .apply()
-
-            updateExpansionVisibility()
-        }
-
-        // ITEM DROPDOWN
-
-        findViewById<View>(R.id.a_i_expand).setOnClickListener {
-            itemExpanded = !itemExpanded
-
-            statePreferences.edit()
-                .putBoolean("item_expanded", itemExpanded)
-                .apply()
-
-            updateExpansionVisibility()
-        }
-
-        // SHOPPING PAGE
-
-        findViewById<TextView>(R.id.a_shopping).setOnClickListener {
-            finish()
-        }
-
         // INITIAL STATE
-
         updateEditVisibility()
         updateNameColors()
         updateSaveButton()
     }
 
-    // EDIT NAME
+    // SETUP GROUP
+    private fun setupGroup(
+        root: LinearLayout,
+        idMap: SparseIntArray,
+        isOriginal: Boolean
+    ): GroupUi {
 
+        val group = GroupUi(
+            root = root,
+            idMap = idMap,
+            isOriginal = isOriginal
+        )
+
+        // PLACE DROPDOWN
+        findInGroup<View>(group, R.id.a_p_expand)?.setOnClickListener {
+
+            group.placeExpanded = !group.placeExpanded
+
+            if (group.isOriginal) {
+                statePreferences.edit()
+                    .putBoolean("place_expanded", group.placeExpanded)
+                    .apply()
+            }
+
+            updateGroupExpansion(group)
+        }
+
+        // CATEGORY DROPDOWN
+        findInGroup<View>(group, R.id.a_c_expand)?.setOnClickListener {
+
+            group.categoryExpanded = !group.categoryExpanded
+
+            if (group.isOriginal) {
+                statePreferences.edit()
+                    .putBoolean("category_expanded", group.categoryExpanded)
+                    .apply()
+            }
+
+            updateGroupExpansion(group)
+        }
+
+        // ITEM DROPDOWN
+        findInGroup<View>(group, R.id.a_i_expand)?.setOnClickListener {
+
+            group.itemExpanded = !group.itemExpanded
+
+            if (group.isOriginal) {
+                statePreferences.edit()
+                    .putBoolean("item_expanded", group.itemExpanded)
+                    .apply()
+            }
+
+            updateGroupExpansion(group)
+        }
+
+        // ADD GROUP
+        if (isOriginal) {
+
+            findInGroup<View>(group, R.id.c_p_add)?.setOnClickListener {
+                addGroup()
+            }
+        }
+
+        return group
+    }
+
+    // ADD GROUP
+    private fun addGroup() {
+
+        // Inflate a fresh copy without attaching it.
+        val tempRoot = layoutInflater.inflate(
+            R.layout.complete,
+            null,
+            false
+        ) as ViewGroup
+
+        val newGroup = tempRoot.findViewById<LinearLayout>(
+            R.id.group
+        )
+
+        // Detach the group from its actual parent.
+        (newGroup.parent as? ViewGroup)?.removeView(newGroup)
+
+        // Remove edit_place_bar from duplicated groups.
+        val editPlaceBar = newGroup.findViewById<View>(
+            R.id.edit_place_bar
+        )
+
+        (editPlaceBar.parent as? ViewGroup)?.removeView(editPlaceBar)
+
+        // Generate unique IDs for every remaining view.
+        val idMap = SparseIntArray()
+
+        regenerateViewIds(newGroup, idMap)
+
+        // Setup duplicated group.
+        val newGroupUi = setupGroup(
+            root = newGroup,
+            idMap = idMap,
+            isOriginal = false
+        )
+
+        // Duplicates start collapsed.
+        newGroupUi.placeExpanded = false
+        newGroupUi.categoryExpanded = false
+        newGroupUi.itemExpanded = false
+
+        updateDropdownSymbols(newGroupUi)
+
+        updateGroupExpansion(newGroupUi)
+
+        // Add duplicate with 20dp spacing.
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+
+        params.topMargin = dp(20)
+
+        scroll.addView(newGroup, params)
+
+        groups.add(newGroupUi)
+
+        updateEditVisibility()
+    }
+
+    // GENERATE UNIQUE IDS
+    private fun regenerateViewIds(
+        view: View,
+        idMap: SparseIntArray
+    ) {
+
+        val originalId = view.id
+
+        if (originalId != View.NO_ID) {
+
+            val newId = View.generateViewId()
+
+            idMap.put(originalId, newId)
+
+            view.id = newId
+        }
+
+        if (view is ViewGroup) {
+
+            for (i in 0 until view.childCount) {
+
+                regenerateViewIds(
+                    view.getChildAt(i),
+                    idMap
+                )
+            }
+        }
+    }
+
+    // FIND VIEW USING ORIGINAL XML ID
+    private fun <T : View> findInGroup(
+        group: GroupUi,
+        originalId: Int
+    ): T? {
+
+        val actualId = group.idMap.get(
+            originalId,
+            originalId
+        )
+
+        return group.root.findViewById<T>(actualId)
+    }
+
+    // UPDATE DROPDOWN SYMBOLS
+    private fun updateDropdownSymbols(group: GroupUi) {
+
+        val symbols = listOf(
+            R.id.a_p_expand to group.placeExpanded,
+            R.id.a_c_expand to group.categoryExpanded,
+            R.id.a_i_expand to group.itemExpanded
+        )
+
+        for ((id, expanded) in symbols) {
+
+            findInGroup<TextView>(group, id)?.apply {
+
+                text = if (expanded) "v" else ">"
+
+                textSize = 22f
+
+                gravity = android.view.Gravity.CENTER
+
+                includeFontPadding = false
+            }
+        }
+    }
+
+    // UPDATE ONE GROUP'S EXPANSION
+    private fun updateGroupExpansion(group: GroupUi) {
+
+        findInGroup<View>(
+            group,
+            R.id.category_section
+        )?.visibility =
+            if (group.placeExpanded) View.VISIBLE else View.GONE
+
+        findInGroup<View>(
+            group,
+            R.id.item_section
+        )?.visibility =
+            if (group.placeExpanded && group.categoryExpanded) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        findInGroup<View>(
+            group,
+            R.id.item_brand_bar
+        )?.visibility =
+            if (
+                group.placeExpanded &&
+                group.categoryExpanded &&
+                group.itemExpanded
+            ) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        updateDropdownSymbols(group)
+    }
+
+    // UPDATE ALL GROUPS' EXPANSION
+    private fun updateAllExpansionVisibility() {
+
+        for (group in groups) {
+            updateGroupExpansion(group)
+        }
+    }
+
+    // UPDATE EDIT VISIBILITY
+    private fun updateEditVisibility() {
+
+        val visibility =
+            if (editMode) View.VISIBLE else View.GONE
+
+        for (group in groups) {
+
+            // PLACE CONTROLS
+            findInGroup<View>(group, R.id.c_p_add)?.visibility = visibility
+            findInGroup<View>(group, R.id.c_p_sort)?.visibility = visibility
+            findInGroup<View>(group, R.id.c_p_add_list)?.visibility = visibility
+
+            // CATEGORY CONTROLS
+            findInGroup<View>(group, R.id.c_c_add)?.visibility = visibility
+            findInGroup<View>(group, R.id.c_c_sort)?.visibility = visibility
+            findInGroup<View>(group, R.id.c_c_add_list)?.visibility = visibility
+
+            // ITEM CONTROLS
+            findInGroup<View>(group, R.id.c_i_add)?.visibility = visibility
+            findInGroup<View>(group, R.id.c_i_sort)?.visibility = visibility
+            findInGroup<View>(group, R.id.c_i_add_list)?.visibility = visibility
+        }
+    }
+
+    // EDIT NAME
     private fun editName(
         textView: TextView,
         hint: String,
@@ -243,14 +510,20 @@ class Complete : AppCompatActivity() {
     ) {
 
         val input = EditText(this).apply {
+
             setText(textView.text)
             setSelection(text.length)
+
             this.hint = hint
+
             setTextColor(white)
             setHintTextColor(muted)
+
             textSize = 18f
-            inputType = InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+
+            inputType =
+                InputType.TYPE_CLASS_TEXT or
+                        InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
         }
 
         AlertDialog.Builder(this)
@@ -262,21 +535,24 @@ class Complete : AppCompatActivity() {
                 val newName = input.text.toString().trim()
 
                 if (newName.isNotEmpty()) {
+
                     textView.text = newName
+
                     onChanged()
                 }
             }
             .show()
     }
 
-    // CHANGE NAME COLORS
-
+    // UPDATE NAME COLORS
     private fun updateNameColors() {
 
         if (!editMode) {
+
             placeName.setTextColor(white)
             categoryName.setTextColor(white)
             itemName.setTextColor(white)
+
             return
         }
 
@@ -293,70 +569,29 @@ class Complete : AppCompatActivity() {
         )
     }
 
-    // SAVE BUTTON COLOR
-
+    // CHECK CHANGES
     private fun hasChanges(): Boolean {
-        return placeChanged || categoryChanged || itemChanged
+
+        return placeChanged ||
+                categoryChanged ||
+                itemChanged
     }
 
+    // UPDATE SAVE BUTTON
     private fun updateSaveButton() {
 
-        editButton.text = if (editMode) "Save" else "Edit"
+        editButton.text =
+            if (editMode) "Save" else "Edit"
 
         editButton.backgroundTintList =
-            android.content.res.ColorStateList.valueOf(
+            ColorStateList.valueOf(
                 if (editMode && hasChanges()) orange else gray
             )
     }
 
-    // EXPANSION VISIBILITY
+    // DP CONVERSION
+    private fun dp(value: Int): Int {
 
-    private fun updateExpansionVisibility() {
-
-        findViewById<View>(R.id.category_section).visibility =
-            if (placeExpanded) View.VISIBLE else View.GONE
-
-        findViewById<View>(R.id.item_section).visibility =
-            if (placeExpanded && categoryExpanded) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
-
-        findViewById<View>(R.id.item_brand_bar).visibility =
-            if (placeExpanded && categoryExpanded && itemExpanded) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
-    }
-
-    // EDIT MODE VISIBILITY
-
-    private fun updateEditVisibility() {
-
-        val visibility = if (editMode) {
-            View.VISIBLE
-        } else {
-            View.GONE
-        }
-
-        // PLUS BUTTONS
-
-        findViewById<View>(R.id.c_p_add).visibility = visibility
-        findViewById<View>(R.id.c_c_add).visibility = visibility
-        findViewById<View>(R.id.c_i_add).visibility = visibility
-
-        // SORT BUTTONS
-
-        findViewById<View>(R.id.c_p_sort).visibility = visibility
-        findViewById<View>(R.id.c_c_sort).visibility = visibility
-        findViewById<View>(R.id.c_i_sort).visibility = visibility
-
-        // ADD TO LIST BUTTONS
-
-        findViewById<View>(R.id.c_p_add_list).visibility = visibility
-        findViewById<View>(R.id.c_c_add_list).visibility = visibility
-        findViewById<View>(R.id.c_i_add_list).visibility = visibility
+        return (value * resources.displayMetrics.density).toInt()
     }
 }
