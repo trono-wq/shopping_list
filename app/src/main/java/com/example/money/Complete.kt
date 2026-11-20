@@ -422,13 +422,13 @@ class Complete : AppCompatActivity() {
 
             findInGroup<TextView>(group, id)?.apply {
 
-                text = if (expanded) "v" else ">"
+                this.text = if (expanded) "v" else ">"
 
-                textSize = 22f
+                this.textSize = if (id == R.id.a_i_expand) 15f else 22f
 
-                gravity = android.view.Gravity.CENTER
+                this.gravity = android.view.Gravity.CENTER
 
-                includeFontPadding = false
+                this.includeFontPadding = false
             }
         }
     }
@@ -502,14 +502,20 @@ class Complete : AppCompatActivity() {
         }
     }
 
-    // EDIT NAME
+    // EDIT NAME INLINE
     private fun editName(
         textView: TextView,
         hint: String,
         onChanged: () -> Unit
     ) {
+        val parent = textView.parent as? ViewGroup ?: return
+        val index = parent.indexOfChild(textView)
+
+        val params = textView.layoutParams
 
         val input = EditText(this).apply {
+
+            id = textView.id
 
             setText(textView.text)
             setSelection(text.length)
@@ -519,29 +525,47 @@ class Complete : AppCompatActivity() {
             setTextColor(white)
             setHintTextColor(muted)
 
-            textSize = 18f
+            textSize = textView.textSize / resources.displayMetrics.scaledDensity
 
-            inputType =
-                InputType.TYPE_CLASS_TEXT or
-                        InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            inputType = InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+
+            background = textView.background
+            gravity = textView.gravity
+
+            setSingleLine(true)
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Edit $hint")
-            .setView(input)
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Save") { _, _ ->
+        parent.removeViewAt(index)
+        parent.addView(input, index, params)
+
+        input.requestFocus()
+
+        input.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
 
                 val newName = input.text.toString().trim()
 
+                textView.text = if (newName.isNotEmpty()) {
+                    newName
+                } else {
+                    textView.text
+                }
+
+                parent.removeView(input)
+                parent.addView(textView, index, params)
+
                 if (newName.isNotEmpty()) {
-
                     textView.text = newName
-
                     onChanged()
                 }
             }
-            .show()
+        }
+
+        input.setOnEditorActionListener { _, _, _ ->
+            input.clearFocus()
+            true
+        }
     }
 
     // UPDATE NAME COLORS

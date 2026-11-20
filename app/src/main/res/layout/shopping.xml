@@ -291,7 +291,6 @@
                         android:padding="5dp"
                         android:textColor="#FFFFFF"
                         android:textSize="20sp"
-                        android:textStyle="bold"
                         android:layout_weight="1"/>
 
                     <androidx.appcompat.widget.AppCompatCheckBox
