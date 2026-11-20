@@ -31,10 +31,20 @@ class Complete : AppCompatActivity() {
     private var categoryChanged = false
     private var itemChanged = false
 
+    private var brandChanged = false
+    private var nameChanged = false
+    private var weightChanged = false
+    private var quantityChanged = false
+
     // LAST SAVED NAMES
     private var savedPlaceName = ""
     private var savedCategoryName = ""
     private var savedItemName = ""
+
+    private var savedBrandName = ""
+    private var savedNameName = ""
+    private var savedWeightName = ""
+    private var savedQuantityName = ""
 
     private val gray = Color.rgb(102, 102, 102)
     private val muted = Color.rgb(153, 153, 153)
@@ -57,6 +67,11 @@ class Complete : AppCompatActivity() {
     private lateinit var placeName: TextView
     private lateinit var categoryName: TextView
     private lateinit var itemName: TextView
+
+    private lateinit var brandName: TextView
+    private lateinit var nameName: TextView
+    private lateinit var weightName: TextView
+    private lateinit var quantityName: TextView
 
     private data class GroupUi(
         val root: LinearLayout,
@@ -132,6 +147,26 @@ class Complete : AppCompatActivity() {
             R.id.a_i_name
         )!!
 
+        brandName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_b_brand
+        )!!
+
+        nameName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_b_name
+        )!!
+
+        weightName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_b_weight
+        )!!
+
+        quantityName = findInGroup<TextView>(
+            originalGroup,
+            R.id.a_b_quantity
+        )!!
+
         // LOAD SAVED NAMES
         placeName.text = dataPreferences.getString(
             "place_name",
@@ -148,10 +183,35 @@ class Complete : AppCompatActivity() {
             itemName.text.toString()
         )
 
+        brandName.text = dataPreferences.getString(
+            "brand_name",
+            brandName.text.toString()
+        )
+
+        nameName.text = dataPreferences.getString(
+            "name_name",
+            nameName.text.toString()
+        )
+
+        weightName.text = dataPreferences.getString(
+            "weight_name",
+            weightName.text.toString()
+        )
+
+        quantityName.text = dataPreferences.getString(
+            "quantity_name",
+            quantityName.text.toString()
+        )
+
         // STORE LAST SAVED NAMES
         savedPlaceName = placeName.text.toString()
         savedCategoryName = categoryName.text.toString()
         savedItemName = itemName.text.toString()
+
+        savedBrandName = brandName.text.toString()
+        savedNameName = nameName.text.toString()
+        savedWeightName = weightName.text.toString()
+        savedQuantityName = quantityName.text.toString()
 
         // LOAD SAVED EXPANSION STATES
         originalGroup.placeExpanded =
@@ -176,6 +236,11 @@ class Complete : AppCompatActivity() {
                 categoryChanged = false
                 itemChanged = false
 
+                brandChanged = false
+                nameChanged = false
+                weightChanged = false
+                quantityChanged = false
+
                 updateEditVisibility()
                 updateNameColors()
                 updateSaveButton()
@@ -186,19 +251,32 @@ class Complete : AppCompatActivity() {
                     hasChanges() &&
                     placeName.text.isNotBlank() &&
                     categoryName.text.isNotBlank() &&
-                    itemName.text.isNotBlank()
+                    itemName.text.isNotBlank() &&
+                    brandName.text.isNotBlank() &&
+                    nameName.text.isNotBlank() &&
+                    weightName.text.isNotBlank() &&
+                    quantityName.text.isNotBlank()
                 ) {
 
                     dataPreferences.edit()
                         .putString("place_name", placeName.text.toString())
                         .putString("category_name", categoryName.text.toString())
                         .putString("item_name", itemName.text.toString())
+                        .putString("brand_name", brandName.text.toString())
+                        .putString("name_name", nameName.text.toString())
+                        .putString("weight_name", weightName.text.toString())
+                        .putString("quantity_name", quantityName.text.toString())
                         .apply()
 
                     // UPDATE LAST SAVED NAMES
                     savedPlaceName = placeName.text.toString()
                     savedCategoryName = categoryName.text.toString()
                     savedItemName = itemName.text.toString()
+
+                    savedBrandName = brandName.text.toString()
+                    savedNameName = nameName.text.toString()
+                    savedWeightName = weightName.text.toString()
+                    savedQuantityName = quantityName.text.toString()
                 }
 
                 // HIDE KEYBOARD AND REMOVE CURSOR
@@ -251,6 +329,50 @@ class Complete : AppCompatActivity() {
             if (editMode) {
                 editName(itemName, "[Item]", savedItemName) { changed ->
                     itemChanged = changed
+                    updateNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // BRAND NAME
+        brandName.setOnClickListener {
+            if (editMode) {
+                editName(brandName, "[Brand]", savedBrandName) { changed ->
+                    brandChanged = changed
+                    updateNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+// NAME
+        nameName.setOnClickListener {
+            if (editMode) {
+                editName(nameName, "[Name]", savedNameName) { changed ->
+                    nameChanged = changed
+                    updateNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+// WEIGHT
+        weightName.setOnClickListener {
+            if (editMode) {
+                editName(weightName, "[Weight]", savedWeightName) { changed ->
+                    weightChanged = changed
+                    updateNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+// QUANTITY
+        quantityName.setOnClickListener {
+            if (editMode) {
+                editName(quantityName, "[Quantity]", savedQuantityName) { changed ->
+                    quantityChanged = changed
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -559,7 +681,12 @@ class Complete : AppCompatActivity() {
             background = textView.background
             gravity = textView.gravity
 
-            setSingleLine(true)
+            setSingleLine(false)
+            setHorizontallyScrolling(false)
+            inputType = InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            gravity = textView.gravity
         }
 
         parent.removeViewAt(index)
@@ -625,9 +752,15 @@ class Complete : AppCompatActivity() {
             categoryName.setTextColor(white)
             itemName.setTextColor(white)
 
+            brandName.setTextColor(muted)
+            nameName.setTextColor(muted)
+            weightName.setTextColor(muted)
+            quantityName.setTextColor(muted)
+
             return
         }
 
+        // PLACE / CATEGORY / ITEM
         placeName.setTextColor(
             if (placeChanged) white else muted
         )
@@ -639,6 +772,23 @@ class Complete : AppCompatActivity() {
         itemName.setTextColor(
             if (itemChanged) white else muted
         )
+
+        // BRAND / NAME / WEIGHT / QUANTITY
+        brandName.setTextColor(
+            if (brandChanged) muted else white
+        )
+
+        nameName.setTextColor(
+            if (nameChanged) muted else white
+        )
+
+        weightName.setTextColor(
+            if (weightChanged) muted else white
+        )
+
+        quantityName.setTextColor(
+            if (quantityChanged) muted else white
+        )
     }
 
     // CHECK CHANGES
@@ -646,7 +796,11 @@ class Complete : AppCompatActivity() {
 
         return placeChanged ||
                 categoryChanged ||
-                itemChanged
+                itemChanged ||
+                brandChanged ||
+                nameChanged ||
+                weightChanged ||
+                quantityChanged
     }
 
     // UPDATE SAVE BUTTON
@@ -655,7 +809,11 @@ class Complete : AppCompatActivity() {
         val allNamesFilled =
             placeName.text.isNotBlank() &&
                     categoryName.text.isNotBlank() &&
-                    itemName.text.isNotBlank()
+                    itemName.text.isNotBlank() &&
+                    brandName.text.isNotBlank() &&
+                    nameName.text.isNotBlank() &&
+                    weightName.text.isNotBlank() &&
+                    quantityName.text.isNotBlank()
 
         val canSave =
             editMode &&

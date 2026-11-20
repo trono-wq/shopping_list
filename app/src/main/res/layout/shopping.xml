@@ -66,7 +66,8 @@
             android:gravity="center"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingBottom="5dp">
 
             <EditText
                 android:id="@+id/a_search"
@@ -86,8 +87,8 @@
                 android:textSize="15sp"/>
 
             <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/s_edit"
-                android:text="@string/s_edit"
+                android:id="@+id/c_edit"
+                android:text="@string/c_edit"
 
                 android:layout_width="wrap_content"
                 android:layout_height="50dp"
@@ -100,7 +101,7 @@
 
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="0dp"
         android:fillViewport="true"
 
         app:layout_constraintTop_toBottomOf="@id/top_section"
@@ -113,9 +114,14 @@
 
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:layout_marginTop="20dp"
+            android:fillViewport="true"
 
-            <LinearLayout
+            app:layout_constraintTop_toBottomOf="@id/top_section">
+
+
+        <LinearLayout
                 android:id="@+id/group"
 
                 android:layout_width="match_parent"
