@@ -9,13 +9,13 @@
     <string name="a_p_expand">      v</string>
     <string name="a_c_expand">      v</string>
     <string name="a_i_expand">      v</string>
-    <string name="a_p_name">        Place</string>
-    <string name="a_c_name">        Category</string>
-    <string name="a_i_name">        Item</string>
-    <string name="a_b_brand">       BRAND</string>
-    <string name="a_b_name">        NAME</string>
-    <string name="a_b_weight">      WEIGHT</string>
-    <string name="a_b_quantity">    QUANTITY</string>
+    <string name="a_p_name">        [Place]</string>
+    <string name="a_c_name">        [Category]</string>
+    <string name="a_i_name">        [Item]</string>
+    <string name="a_b_brand">       [BRAND]</string>
+    <string name="a_b_name">        [NAME]</string>
+    <string name="a_b_weight">      [WEIGHT]</string>
+    <string name="a_b_quantity">    [QUANTITY]</string>
 
     <string name="c_edit">          Edit</string>
     <string name="c_p_sort">        Sort alphabetically</string>

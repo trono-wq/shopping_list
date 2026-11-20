@@ -18,6 +18,10 @@ import androidx.appcompat.widget.AppCompatButton
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import android.content.Context
+import android.view.inputmethod.InputMethodManager
+import android.text.Editable
+import android.text.TextWatcher
 
 class Complete : AppCompatActivity() {
 
@@ -26,6 +30,11 @@ class Complete : AppCompatActivity() {
     private var placeChanged = false
     private var categoryChanged = false
     private var itemChanged = false
+
+    // LAST SAVED NAMES
+    private var savedPlaceName = ""
+    private var savedCategoryName = ""
+    private var savedItemName = ""
 
     private val gray = Color.rgb(102, 102, 102)
     private val muted = Color.rgb(153, 153, 153)
@@ -139,6 +148,11 @@ class Complete : AppCompatActivity() {
             itemName.text.toString()
         )
 
+        // STORE LAST SAVED NAMES
+        savedPlaceName = placeName.text.toString()
+        savedCategoryName = categoryName.text.toString()
+        savedItemName = itemName.text.toString()
+
         // LOAD SAVED EXPANSION STATES
         originalGroup.placeExpanded =
             statePreferences.getBoolean("place_expanded", false)
@@ -168,13 +182,31 @@ class Complete : AppCompatActivity() {
 
             } else {
 
-                if (hasChanges()) {
+                if (
+                    hasChanges() &&
+                    placeName.text.isNotBlank() &&
+                    categoryName.text.isNotBlank() &&
+                    itemName.text.isNotBlank()
+                ) {
 
                     dataPreferences.edit()
                         .putString("place_name", placeName.text.toString())
                         .putString("category_name", categoryName.text.toString())
                         .putString("item_name", itemName.text.toString())
                         .apply()
+
+                    // UPDATE LAST SAVED NAMES
+                    savedPlaceName = placeName.text.toString()
+                    savedCategoryName = categoryName.text.toString()
+                    savedItemName = itemName.text.toString()
+                }
+
+                // HIDE KEYBOARD AND REMOVE CURSOR
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+                currentFocus?.let { focusedView ->
+                    imm.hideSoftInputFromWindow(focusedView.windowToken, 0)
+                    focusedView.clearFocus()
                 }
 
                 editMode = false
@@ -193,11 +225,8 @@ class Complete : AppCompatActivity() {
         placeName.setOnClickListener {
 
             if (editMode) {
-
-                editName(placeName, "Place") {
-
-                    placeChanged = true
-
+                editName(placeName, "[Place]", savedPlaceName) { changed ->
+                    placeChanged = changed
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -208,11 +237,8 @@ class Complete : AppCompatActivity() {
         categoryName.setOnClickListener {
 
             if (editMode) {
-
-                editName(categoryName, "Category") {
-
-                    categoryChanged = true
-
+                editName(categoryName, "[Category]", savedCategoryName) { changed ->
+                    categoryChanged = changed
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -223,11 +249,8 @@ class Complete : AppCompatActivity() {
         itemName.setOnClickListener {
 
             if (editMode) {
-
-                editName(itemName, "Item") {
-
-                    itemChanged = true
-
+                editName(itemName, "[Item]", savedItemName) { changed ->
+                    itemChanged = changed
                     updateNameColors()
                     updateSaveButton()
                 }
@@ -506,12 +529,15 @@ class Complete : AppCompatActivity() {
     private fun editName(
         textView: TextView,
         hint: String,
-        onChanged: () -> Unit
+        savedName: String,
+        onChanged: (Boolean) -> Unit
     ) {
         val parent = textView.parent as? ViewGroup ?: return
         val index = parent.indexOfChild(textView)
 
         val params = textView.layoutParams
+
+        textView.hint = hint
 
         val input = EditText(this).apply {
 
@@ -541,24 +567,45 @@ class Complete : AppCompatActivity() {
 
         input.requestFocus()
 
+        // CHECK CHANGES WHILE TYPING
+        input.addTextChangedListener(object : android.text.TextWatcher {
+
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {}
+
+            override fun onTextChanged(
+                s: CharSequence?,
+                start: Int,
+                before: Int,
+                count: Int
+            ) {
+                val typedName = s.toString().trim()
+
+                textView.text = typedName
+
+                val changed = typedName.isNotEmpty() && typedName != savedName
+
+                onChanged(changed)
+            }
+
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
         input.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
 
-                val newName = input.text.toString().trim()
+                val finalName = input.text.toString().trim()
 
-                textView.text = if (newName.isNotEmpty()) {
-                    newName
-                } else {
-                    textView.text
-                }
+                textView.text = finalName
 
                 parent.removeView(input)
                 parent.addView(textView, index, params)
 
-                if (newName.isNotEmpty()) {
-                    textView.text = newName
-                    onChanged()
-                }
+                onChanged(finalName.isNotEmpty() && finalName != savedName)
             }
         }
 
@@ -567,6 +614,7 @@ class Complete : AppCompatActivity() {
             true
         }
     }
+
 
     // UPDATE NAME COLORS
     private fun updateNameColors() {
@@ -604,12 +652,25 @@ class Complete : AppCompatActivity() {
     // UPDATE SAVE BUTTON
     private fun updateSaveButton() {
 
+        val allNamesFilled =
+            placeName.text.isNotBlank() &&
+                    categoryName.text.isNotBlank() &&
+                    itemName.text.isNotBlank()
+
+        val canSave =
+            editMode &&
+                    hasChanges() &&
+                    allNamesFilled
+
         editButton.text =
             if (editMode) "Save" else "Edit"
 
+        editButton.isEnabled =
+            !editMode || allNamesFilled
+
         editButton.backgroundTintList =
             ColorStateList.valueOf(
-                if (editMode && hasChanges()) orange else gray
+                if (canSave) orange else gray
             )
     }
 

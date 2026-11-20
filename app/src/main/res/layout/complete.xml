@@ -392,8 +392,7 @@
                             android:padding="5dp"
                             android:textColor="#FFFFFF"
                             android:textSize="20sp"
-                            android:layout_weight="1"
-                            android:textStyle="italic"/>
+                            android:layout_weight="1"/>
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/c_i_add_list"
@@ -423,8 +422,7 @@
                         <TableRow
                             android:gravity="center_vertical"
                             android:fillViewport="true"
-                            app:layout_constraintTop_toBottomOf="@id/item_bar"
-                            >
+                            app:layout_constraintTop_toBottomOf="@id/item_bar">
 
                             <TextView
                                 android:id="@+id/a_b_brand"
@@ -443,7 +441,6 @@
 
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:padding="5dp"
                                 android:textColor="#999999"
                                 android:textSize="20sp"
                                 android:textStyle="bold"/>
@@ -465,7 +462,6 @@
 
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:padding="5dp"
                                 android:textColor="#999999"
                                 android:textSize="20sp"
                                 android:textStyle="bold"/>
@@ -487,7 +483,6 @@
 
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:padding="5dp"
                                 android:textColor="#999999"
                                 android:textSize="20sp"
                                 android:textStyle="bold"/>
