@@ -1,4 +1,3 @@
-
 package com.example.shoppinglist
 
 import android.app.AlertDialog

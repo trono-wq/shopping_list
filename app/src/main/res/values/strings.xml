@@ -25,6 +25,11 @@
     <string name="c_c_add">         +</string>
     <string name="c_i_add">         +</string>
     <string name="c_i_b_add">       +</string>
+    <string name="c_p_remove">      —</string>
+    <string name="c_c_remove">      —</string>
+    <string name="c_i_remove">      —</string>
+    <string name="c_i_b_remove">    —</string>
+
     <string name="c_p_add_list">    Add to list</string>
     <string name="c_c_add_list">    Add to list</string>
     <string name="c_i_add_list">    Add to list</string>
