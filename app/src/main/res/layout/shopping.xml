@@ -133,7 +133,8 @@
 
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:gravity="center_vertical">
 
                     <LinearLayout
                         android:id="@+id/place_bar"
@@ -190,7 +191,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:layout_marginStart="30dp">
+                    android:layout_marginStart="30dp"
+                    android:gravity="center_vertical">
 
                     <LinearLayout
                         android:id="@+id/category_bar"
@@ -247,7 +249,8 @@
 
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:gravity="center_vertical">
 
                     <LinearLayout
                         android:id="@+id/edit_item_bar"
