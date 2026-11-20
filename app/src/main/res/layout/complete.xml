@@ -42,7 +42,7 @@
 
                 android:layout_height="wrap_content"
                 android:layout_width="wrap_content"
-                android:padding="3dp"
+                android:padding="5dp"
                 android:textColor="#dc6500"
                 android:textSize="20sp"
                 android:textStyle="bold"/>
@@ -171,7 +171,8 @@
 
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:layout_marginStart="7dp">
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/a_p_expand"
@@ -185,7 +186,7 @@
                             android:padding="0dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:gravity="center"/>
+                            android:gravity="center" />
 
                         <TextView
                             android:id="@+id/a_p_name"
@@ -267,7 +268,8 @@
 
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:layout_marginStart="7dp">
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/a_c_expand"
@@ -275,7 +277,7 @@
                             android:layout_width="35dp"
                             android:layout_height="40dp"
                             android:backgroundTint="#666666"
-                            android:text="@string/a_p_expand"
+                            android:text="@string/a_c_expand"
                             android:textSize="20sp"
                             android:textColor="#1d1b20"
                             android:padding="0dp"
@@ -292,7 +294,8 @@
                             android:padding="5dp"
                             android:textColor="#FFFFFF"
                             android:textSize="20sp"
-                            android:layout_weight="1"/>
+                            android:layout_weight="1"
+                            android:textStyle="italic"/>
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/c_c_add_list"
@@ -300,7 +303,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="40dp"
                             android:backgroundTint="#666666"
-                            android:text="@string/c_p_add_list"
+                            android:text="@string/c_c_add_list"
                             android:textColor="#1d1b20"
                             android:padding="0dp"
                             android:insetTop="0dp"
@@ -335,35 +338,27 @@
 
                             android:layoutDirection="rtl"
                             android:layout_width="0dp"
-                            android:layout_height="40dp"
+                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:minHeight="0dp"
-                            android:paddingTop="0dp"
-                            android:paddingBottom="0dp"
 
                             android:textColor="#666666"
-                            android:scaleX="0.8"
-                            android:scaleY="0.8"
                             android:textSize="15sp"
                             android:clickable="true"
-                            android:focusable="true"
-                            android:transformPivotX="0dp"
-                            android:transformPivotY="25dp"/>
+                            android:focusable="true"/>
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/c_i_add"
 
-                            android:layout_width="25dp"
-                            android:layout_height="30dp"
+                            android:layout_width="35dp"
+                            android:layout_height="40dp"
                             android:backgroundTint="#666666"
-                            android:text="@string/c_p_add"
-                            android:textSize="15sp"
+                            android:text="@string/c_i_add"
+                            android:textSize="25sp"
                             android:textColor="#1d1b20"
                             android:padding="0dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:gravity="center"
-                            android:textStyle="bold"/>
+                            android:gravity="center"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -372,42 +367,41 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:layout_marginStart="60dp">
+                        android:layout_marginStart="67dp">
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/a_i_expand"
 
-                            android:layout_width="25dp"
-                            android:layout_height="30dp"
+                            android:layout_width="35dp"
+                            android:layout_height="40dp"
                             android:backgroundTint="#666666"
-                            android:gravity="center"
+                            android:text="@string/a_i_expand"
+                            android:textSize="20sp"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
-                            android:padding="0dp"
-                            android:text="@string/a_p_expand"
-                            android:textColor="#1d1b20"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
+                            android:gravity="center"/>
 
                         <TextView
                             android:id="@+id/a_i_name"
                             android:text="@string/a_i_name"
 
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:padding="5dp"
                             android:textColor="#FFFFFF"
-                            android:textSize="15sp"
+                            android:textSize="20sp"
                             android:layout_weight="1"
-                            android:gravity="center_vertical"/>
+                            android:textStyle="italic"/>
 
                         <androidx.appcompat.widget.AppCompatButton
                             android:id="@+id/c_i_add_list"
 
-                            android:layout_width="70dp"
-                            android:layout_height="35dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
                             android:backgroundTint="#666666"
-                            android:text="@string/c_p_add_list"
+                            android:text="@string/c_i_add_list"
                             android:textColor="#1d1b20"
                             android:padding="0dp"
                             android:insetTop="0dp"
@@ -415,8 +409,7 @@
                             android:gravity="center"
                             android:includeFontPadding="false"
                             android:textAllCaps="false"
-                            android:layout_gravity="center_vertical"
-                            android:textSize="10sp"/>
+                            android:layout_gravity="center_vertical"/>
                     </LinearLayout>
 
                     <TableLayout
@@ -510,9 +503,7 @@
                                 android:gravity="center"
                                 android:textColor="#999999"
                                 android:textSize="15sp"/>
-
                         </TableRow>
-
                     </TableLayout>
                 </LinearLayout>
             </LinearLayout>

@@ -42,7 +42,7 @@
 
                 android:layout_height="wrap_content"
                 android:layout_width="wrap_content"
-                android:padding="3dp"
+                android:padding="5dp"
                 android:textColor="#dc6500"
                 android:textSize="20sp"
                 android:textStyle="bold"/>
@@ -87,7 +87,7 @@
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/s_edit"
-                android:text="@string/c_edit"
+                android:text="@string/s_edit"
 
                 android:layout_width="wrap_content"
                 android:layout_height="50dp"
@@ -116,294 +116,284 @@
             android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/place_section"
+                android:id="@+id/group"
 
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <LinearLayout
-                    android:id="@+id/edit_place_bar"
+                    android:id="@+id/place_section"
 
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"/>
+                    android:orientation="vertical">
 
-                <LinearLayout
-                    android:id="@+id/place_bar"
+                    <LinearLayout
+                        android:id="@+id/place_bar"
 
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginStart="5dp">
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/a_p_expand"
-
-                        android:layout_width="35dp"
-                        android:layout_height="40dp"
-                        android:backgroundTint="#666666"
-                        android:text="@string/a_p_expand"
-                        android:textSize="20sp"
-                        android:textColor="#1d1b20"
-                        android:padding="0dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:gravity="center"/>
-
-                    <TextView
-                        android:id="@+id/a_p_name"
-                        android:text="@string/a_p_name"
-
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:layout_weight="1"/>
+                        android:orientation="horizontal"
+                        android:layout_marginStart="7dp">
 
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/s_p_box"
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/a_p_expand"
 
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:backgroundTint="#666666"
-                        android:textColor="#1d1b20"
-                        android:padding="0dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:gravity="center"/>
-                </LinearLayout>
-            </LinearLayout>
+                            android:layout_width="35dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#666666"
+                            android:text="@string/a_p_expand"
+                            android:textSize="20sp"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:gravity="center" />
 
-            <LinearLayout
-                android:id="@+id/category_section"
+                        <TextView
+                            android:id="@+id/a_p_name"
+                            android:text="@string/a_p_name"
 
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="20dp"
-                android:layout_marginStart="10dp">
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="5dp"
+                            android:textColor="#FFFFFF"
+                            android:textSize="20sp"
+                            android:textStyle="bold"
+                            android:layout_weight="1"/>
 
-                <LinearLayout
-                    android:id="@+id/edit_category_bar"
+                        <androidx.appcompat.widget.AppCompatCheckBox
+                            android:id="@+id/s_p_box"
 
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"/>
-
-                <LinearLayout
-                    android:id="@+id/category_bar"
-
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginStart="5dp">
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/a_c_expand"
-
-                        android:layout_width="35dp"
-                        android:layout_height="40dp"
-                        android:backgroundTint="#666666"
-                        android:text="@string/a_p_expand"
-                        android:textSize="20sp"
-                        android:textColor="#1d1b20"
-                        android:padding="0dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:gravity="center"/>
-
-                    <TextView
-                        android:id="@+id/a_c_name"
-                        android:text="@string/a_c_name"
-
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:layout_weight="1"/>
-
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/s_c_box"
-
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:backgroundTint="#666666"
-                        android:textColor="#1d1b20"
-                        android:padding="0dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:gravity="center"/>
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/item_section"
-
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="20dp">
-
-                <LinearLayout
-                    android:id="@+id/edit_item_bar"
-
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginStart="20dp"/>
-
-                <LinearLayout
-                    android:id="@+id/item_bar"
-
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginStart="25dp">
-
-                    <androidx.appcompat.widget.AppCompatButton
-                        android:id="@+id/a_i_expand"
-
-                        android:layout_width="35dp"
-                        android:layout_height="40dp"
-                        android:backgroundTint="#666666"
-                        android:text="@string/a_p_expand"
-                        android:textSize="20sp"
-                        android:textColor="#1d1b20"
-                        android:padding="0dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:gravity="center"/>
-
-                    <TextView
-                        android:id="@+id/a_i_name"
-                        android:text="@string/a_i_name"
-
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:padding="5dp"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
-                        android:layout_weight="1"/>
-
-                    <androidx.appcompat.widget.AppCompatCheckBox
-                        android:id="@+id/s_i_box"
-
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:backgroundTint="#666666"
-                        android:textColor="#1d1b20"
-                        android:padding="0dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:gravity="center"/>
-
-
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:backgroundTint="#666666"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:layout_gravity="center_vertical"
+                            android:gravity="center"/>
+                    </LinearLayout>
                 </LinearLayout>
 
-                <TableLayout
-                    android:id="@+id/item_brand_bar"
+                <LinearLayout
+                    android:id="@+id/category_section"
 
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:stretchColumns="0,2,4,6">
+                    android:orientation="vertical"
+                    android:layout_marginStart="30dp">
 
-                    <TableRow
+                    <LinearLayout
+                        android:id="@+id/category_bar"
+
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginStart="7dp">
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/a_c_expand"
+
+                            android:layout_width="35dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#666666"
+                            android:text="@string/a_c_expand"
+                            android:textSize="20sp"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:gravity="center"/>
+
+                        <TextView
+                            android:id="@+id/a_c_name"
+                            android:text="@string/a_c_name"
+
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="5dp"
+                            android:textColor="#FFFFFF"
+                            android:textSize="20sp"
+                            android:layout_weight="1"
+                            android:textStyle="italic"/>
+
+                        <androidx.appcompat.widget.AppCompatCheckBox
+                            android:id="@+id/s_c_box"
+
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:backgroundTint="#666666"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:layout_gravity="center_vertical"
+                            android:gravity="center"/>
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/item_section"
+
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/edit_item_bar"
+
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginTop="10dp"
-                        android:fillViewport="true"
-                        app:layout_constraintTop_toBottomOf="@id/item_bar"
-                        >
+                        android:layout_marginStart="60dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/item_bar"
+
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginStart="67dp">
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/a_i_expand"
+
+                            android:layout_width="35dp"
+                            android:layout_height="40dp"
+                            android:backgroundTint="#666666"
+                            android:text="@string/a_i_expand"
+                            android:textSize="20sp"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:gravity="center"/>
 
                         <TextView
-                            android:id="@+id/a_b_brand"
-                            android:text="@string/a_b_brand"
-
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:padding="5dp"
-                            android:gravity="center"
-                            android:textColor="#999999"
-                            android:textSize="15sp"/>
-
-                        <TextView
-                            android:text="@string/a_s2"
+                            android:id="@+id/a_i_name"
+                            android:text="@string/a_i_name"
 
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:padding="5dp"
-                            android:textColor="#999999"
+                            android:textColor="#FFFFFF"
                             android:textSize="20sp"
-                            android:textStyle="bold"/>
-
-                        <TextView
-                            android:id="@+id/a_b_name"
-                            android:text="@string/a_b_name"
-
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:padding="5dp"
-                            android:gravity="center"
-                            android:textColor="#999999"
-                            android:textSize="15sp"/>
+                            android:textStyle="italic"/>
 
-                        <TextView
-                            android:text="@string/a_s2"
+                        <androidx.appcompat.widget.AppCompatCheckBox
+                            android:id="@+id/s_i_box"
 
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:padding="5dp"
-                            android:textColor="#999999"
-                            android:textSize="20sp"
-                            android:textStyle="bold"/>
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:backgroundTint="#666666"
+                            android:textColor="#1d1b20"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:layout_gravity="center_vertical"
+                            android:gravity="center"/>
+                    </LinearLayout>
 
-                        <TextView
-                            android:id="@+id/a_b_weight"
-                            android:text="@string/a_b_weight"
+                    <TableLayout
+                        android:id="@+id/item_brand_bar"
 
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:padding="5dp"
-                            android:gravity="center"
-                            android:textColor="#999999"
-                            android:textSize="15sp"/>
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:stretchColumns="0,2,4,6">
 
-                        <TextView
-                            android:text="@string/a_s2"
+                        <TableRow
+                            android:gravity="center_vertical"
+                            android:fillViewport="true"
+                            app:layout_constraintTop_toBottomOf="@id/item_bar"
+                            >
 
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:padding="5dp"
-                            android:textColor="#999999"
-                            android:textSize="20sp"
-                            android:textStyle="bold"/>
+                            <TextView
+                                android:id="@+id/a_b_brand"
+                                android:text="@string/a_b_brand"
 
-                        <TextView
-                            android:id="@+id/a_b_quantity"
-                            android:text="@string/a_b_quantity"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:padding="5dp"
+                                android:gravity="center"
+                                android:textColor="#999999"
+                                android:textSize="15sp"/>
 
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:padding="5dp"
-                            android:gravity="center"
-                            android:textColor="#999999"
-                            android:textSize="15sp"/>
+                            <TextView
+                                android:text="@string/a_s2"
 
-                    </TableRow>
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:padding="5dp"
+                                android:textColor="#999999"
+                                android:textSize="20sp"
+                                android:textStyle="bold"/>
 
-                </TableLayout>
+                            <TextView
+                                android:id="@+id/a_b_name"
+                                android:text="@string/a_b_name"
+
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:padding="5dp"
+                                android:gravity="center"
+                                android:textColor="#999999"
+                                android:textSize="15sp"/>
+
+                            <TextView
+                                android:text="@string/a_s2"
+
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:padding="5dp"
+                                android:textColor="#999999"
+                                android:textSize="20sp"
+                                android:textStyle="bold"/>
+
+                            <TextView
+                                android:id="@+id/a_b_weight"
+                                android:text="@string/a_b_weight"
+
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:padding="5dp"
+                                android:gravity="center"
+                                android:textColor="#999999"
+                                android:textSize="15sp"/>
+
+                            <TextView
+                                android:text="@string/a_s2"
+
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:padding="5dp"
+                                android:textColor="#999999"
+                                android:textSize="20sp"
+                                android:textStyle="bold"/>
+
+                            <TextView
+                                android:id="@+id/a_b_quantity"
+                                android:text="@string/a_b_quantity"
+
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:padding="5dp"
+                                android:gravity="center"
+                                android:textColor="#999999"
+                                android:textSize="15sp"/>
+                        </TableRow>
+                    </TableLayout>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

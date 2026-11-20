@@ -424,7 +424,7 @@ class Complete : AppCompatActivity() {
 
                 this.text = if (expanded) "v" else ">"
 
-                this.textSize = if (id == R.id.a_i_expand) 15f else 22f
+                this.textSize = if (id == R.id.a_i_expand) 20f else 20f
 
                 this.gravity = android.view.Gravity.CENTER
 
