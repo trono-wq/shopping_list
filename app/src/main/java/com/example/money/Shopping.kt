@@ -36,8 +36,10 @@ class Shopping : AppCompatActivity() {
 
         findViewById<TextView>(R.id.a_complete).setOnClickListener {
             startActivity(Intent(this, Complete::class.java))
+        }
 
-
+        findViewById<TextView>(R.id.a_gucci_mane).setOnClickListener {
+            startActivity(Intent(this, Gucci_Mane::class.java))
         }
     }
 }

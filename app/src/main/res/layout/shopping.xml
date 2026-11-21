@@ -58,6 +58,28 @@
                 android:textSize="15sp"
                 android:clickable="true"
                 android:focusable="true"/>
+
+            <TextView
+                android:text="@string/a_separator"
+
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:padding="5dp"
+                android:textColor="#dc6500"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/a_gucci_mane"
+                android:text="@string/a_gucci_mane"
+
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:padding="5dp"
+                android:textColor="#dc6500"
+                android:textSize="15sp"
+                android:clickable="true"
+                android:focusable="true"/>
         </LinearLayout>
 
         <LinearLayout

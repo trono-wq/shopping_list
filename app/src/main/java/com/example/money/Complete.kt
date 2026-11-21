@@ -1,6 +1,7 @@
 package com.example.shoppinglist
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
@@ -150,6 +151,18 @@ class Complete : AppCompatActivity() {
 
             insets
         }
+
+        findViewById<TextView>(R.id.a_gucci_mane)
+            .setOnClickListener {
+
+                val intent = Intent(this, Gucci_Mane::class.java)
+
+                intent.flags =
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+
+                startActivity(intent)
+            }
 
         findViewById<TextView>(R.id.a_shopping).setOnClickListener {
             finish()
@@ -1612,6 +1625,7 @@ class Complete : AppCompatActivity() {
         }
     }
 
+
     // UPDATE EDIT VISIBILITY
     private fun updateEditVisibility() {
 
@@ -1632,8 +1646,20 @@ class Complete : AppCompatActivity() {
 
             findInGroup<View>(
                 group,
-                R.id.c_p_edit
+                R.id.c_p_add_all_list
             )?.visibility = mainVisibility
+
+            findInGroup<TextView>(
+                group,
+                R.id.c_p_edit
+            )?.apply {
+                visibility = mainVisibility
+                text = if (group.placeEditExpanded) "<" else "v"
+
+                textSize = 20f
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+            }
 
             val placeVisibility =
                 if (editMode && group.placeEditExpanded) {
@@ -1662,7 +1688,7 @@ class Complete : AppCompatActivity() {
                 R.id.c_p_add_list
             )?.visibility = placeVisibility
 
-            for ((index, category) in group.categories.withIndex()) {
+            for (category in group.categories) {
 
                 findInCategory<View>(
                     category,
@@ -1676,8 +1702,20 @@ class Complete : AppCompatActivity() {
 
                 findInCategory<View>(
                     category,
-                    R.id.c_c_edit
+                    R.id.c_c_add_all_list
                 )?.visibility = mainVisibility
+
+                findInCategory<TextView>(
+                    category,
+                    R.id.c_c_edit
+                )?.apply {
+                    visibility = mainVisibility
+                    text = if (category.categoryEditExpanded) "<" else "v"
+
+                    textSize = 20f
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                }
 
                 val categoryVisibility =
                     if (editMode && category.categoryEditExpanded) {
@@ -1706,13 +1744,19 @@ class Complete : AppCompatActivity() {
                     R.id.c_c_add_list
                 )?.visibility = categoryVisibility
 
-                // NEW CODE //
-                for ((itemIndex, item) in category.items.withIndex()) {
+                for (item in category.items) {
 
-                    findInItem<View>(
+                    findInItem<TextView>(
                         item,
                         R.id.c_i_edit
-                    )?.visibility = mainVisibility
+                    )?.apply {
+                        visibility = mainVisibility
+                        text = if (item.itemEditExpanded) "<" else "v"
+
+                        textSize = 20f
+                        gravity = Gravity.CENTER
+                        includeFontPadding = false
+                    }
 
                     findInItem<View>(
                         item,
@@ -1723,6 +1767,11 @@ class Complete : AppCompatActivity() {
                         } else {
                             View.GONE
                         }
+
+                    findInItem<View>(
+                        item,
+                        R.id.c_i_add_all_list
+                    )?.visibility = mainVisibility
 
                     val itemVisibility =
                         if (editMode && item.itemEditExpanded) {
@@ -1774,6 +1823,7 @@ class Complete : AppCompatActivity() {
             }
         }
     }
+
 
     // EDIT NAME INLINE
     private fun editName(

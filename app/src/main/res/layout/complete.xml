@@ -58,6 +58,28 @@
                 android:textSize="15sp"
                 android:clickable="true"
                 android:focusable="true"/>
+
+            <TextView
+                android:text="@string/a_separator"
+
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:padding="5dp"
+                android:textColor="#dc6500"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:id="@+id/a_gucci_mane"
+                android:text="@string/a_gucci_mane"
+
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:padding="5dp"
+                android:textColor="#dc6500"
+                android:textSize="15sp"
+                android:clickable="true"
+                android:focusable="true"/>
         </LinearLayout>
 
         <LinearLayout
@@ -156,6 +178,22 @@
                         android:textSize="15sp"
                         android:clickable="true"
                         android:focusable="true"/>
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/c_p_add_all_list"
+
+                        android:backgroundTint="#666666"
+                        android:textColor="#1d1b20"
+                        android:layout_width="100dp"
+                        android:layout_height="40dp"
+                        android:text="@string/c_p_add_all_list"
+                        android:padding="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:textAllCaps="false"
+                        android:layout_gravity="center_vertical"/>
 
                 </LinearLayout>
 
@@ -284,6 +322,22 @@
                             android:clickable="true"
                             android:focusable="true"/>
 
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/c_c_add_all_list"
+
+                            android:backgroundTint="#666666"
+                            android:textColor="#1d1b20"
+                            android:layout_width="100dp"
+                            android:layout_height="40dp"
+                            android:text="@string/c_c_add_all_list"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:textAllCaps="false"
+                            android:layout_gravity="center_vertical"/>
+
                     </LinearLayout>
 
                     <LinearLayout
@@ -411,6 +465,21 @@
                             android:clickable="true"
                             android:focusable="true"/>
 
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/c_i_add_all_list"
+
+                            android:backgroundTint="#666666"
+                            android:textColor="#1d1b20"
+                            android:layout_width="100dp"
+                            android:layout_height="40dp"
+                            android:text="@string/c_i_add_all_list"
+                            android:padding="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:gravity="center"
+                            android:includeFontPadding="false"
+                            android:textAllCaps="false"
+                            android:layout_gravity="center_vertical"/>
                     </LinearLayout>
 
                     <LinearLayout
