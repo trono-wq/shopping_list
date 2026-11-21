@@ -536,7 +536,7 @@ class Complete : AppCompatActivity() {
         updateSaveButton()
 
         // Do not save automatically.
-        // Changes are saved only when the Save button is pressed.
+        // Changes are SAVED only when the Save button is pressed.
     }
 
     // LOAD GROUP DATA
