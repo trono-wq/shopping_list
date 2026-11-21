@@ -1,4 +1,3 @@
-
 package com.example.shoppinglist
 
 import android.content.Context
@@ -28,11 +27,11 @@ import java.util.Locale
 class Complete : AppCompatActivity() {
 
     private var editMode = false
+    private var structureChanged = false
 
     private val gray = Color.rgb(102, 102, 102)
     private val muted = Color.rgb(153, 153, 153)
     private val white = Color.WHITE
-    private val orange = Color.rgb(220, 101, 0)
 
     private val statePreferences by lazy {
         getSharedPreferences("complete_list_state", MODE_PRIVATE)
@@ -65,7 +64,6 @@ class Complete : AppCompatActivity() {
         var quantityChanged: Boolean = false
     )
 
-    // NEW CODE //
     private data class ItemUi(
         val root: LinearLayout,
         val idMap: SparseIntArray,
@@ -81,7 +79,6 @@ class Complete : AppCompatActivity() {
 
         val brands: MutableList<BrandUi> = mutableListOf()
     )
-    // NEW CODE //
 
     private data class CategoryUi(
         val root: LinearLayout,
@@ -96,9 +93,7 @@ class Complete : AppCompatActivity() {
         var savedCategoryName: String = "",
         var categoryChanged: Boolean = false,
 
-        // NEW CODE //
         val items: MutableList<ItemUi> = mutableListOf()
-        // NEW CODE //
     )
 
     private data class GroupUi(
@@ -119,6 +114,8 @@ class Complete : AppCompatActivity() {
     )
 
     private val groups = mutableListOf<GroupUi>()
+
+    private var originalStructure: List<Any> = emptyList()
 
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).toInt()
@@ -198,6 +195,8 @@ class Complete : AppCompatActivity() {
             if (!editMode) {
 
                 editMode = true
+
+                originalStructure = currentStructure()
 
                 for (group in groups) {
 
@@ -305,7 +304,6 @@ class Complete : AppCompatActivity() {
         (categorySection.parent as? ViewGroup)?.removeView(categorySection)
         (itemSection.parent as? ViewGroup)?.removeView(itemSection)
 
-        // NEW CODE //
         val itemContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
 
@@ -316,7 +314,6 @@ class Complete : AppCompatActivity() {
         }
 
         itemContainer.addView(itemSection)
-        // NEW CODE //
 
         val categoryRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -389,6 +386,13 @@ class Complete : AppCompatActivity() {
             addGroup(afterGroup = group)
         }
 
+        findInGroup<View>(
+            group,
+            R.id.c_p_remove
+        )?.setOnClickListener {
+            removeGroup(group)
+        }
+
         return group
     }
 
@@ -421,14 +425,13 @@ class Complete : AppCompatActivity() {
 
         category.categoryName.hint = "[Category]"
 
-        // NEW CODE //
         val firstItem = setupItem(
             root = firstItemSection,
-            idMap = idMap
+            idMap = idMap,
+            category = category
         )
 
         category.items.add(firstItem)
-        // NEW CODE //
 
         findInCategory<View>(
             category,
@@ -478,14 +481,18 @@ class Complete : AppCompatActivity() {
             addCategory(group, category)
         }
 
+        findInCategory<View>(category, R.id.c_c_remove)?.setOnClickListener {
+            removeCategory(group, category)
+        }
+
         return category
     }
 
-    // NEW CODE //
     // SETUP ITEM
     private fun setupItem(
         root: LinearLayout,
-        idMap: SparseIntArray
+        idMap: SparseIntArray,
+        category: CategoryUi
     ): ItemUi {
 
         val item = ItemUi(
@@ -515,7 +522,8 @@ class Complete : AppCompatActivity() {
 
         val firstBrand = setupBrand(
             root = firstRow,
-            idMap = idMap
+            idMap = idMap,
+            item = item
         )
 
         item.brands.add(firstBrand)
@@ -582,13 +590,18 @@ class Complete : AppCompatActivity() {
             }
         }
 
+        findInItem<View>(item, R.id.c_i_remove)?.setOnClickListener {
+            removeItem(category, item)
+        }
+
         return item
     }
 
     // SETUP BRAND ROW
     private fun setupBrand(
         root: TableRow,
-        idMap: SparseIntArray
+        idMap: SparseIntArray,
+        item: ItemUi
     ): BrandUi {
 
         val brand = BrandUi(
@@ -682,9 +695,14 @@ class Complete : AppCompatActivity() {
             }
         }
 
+        brand.root.findViewById<View>(R.id.c_i_b_remove)?.setOnClickListener {
+            removeBrand(item, brand)
+        }
+
         return brand
     }
 
+    // EDIT BRAND FIELD
     // EDIT BRAND FIELD
     private fun editBrandField(
         brand: BrandUi,
@@ -694,7 +712,20 @@ class Complete : AppCompatActivity() {
         field: Int
     ) {
 
-        editName(textView, hint, savedName) { changed ->
+        val keyboardType = if (field == 3) {
+            InputType.TYPE_CLASS_NUMBER
+        } else {
+            InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        }
+
+        editName(
+            textView,
+            hint,
+            savedName,
+            keyboardType
+        ) { changed ->
 
             when (field) {
                 0 -> brand.brandChanged = changed
@@ -707,7 +738,7 @@ class Complete : AppCompatActivity() {
             updateSaveButton()
         }
     }
-    // NEW CODE //
+
 
     // ADD DUPLICATED CATEGORY
     private fun addCategory(
@@ -759,12 +790,6 @@ class Complete : AppCompatActivity() {
         categoryRoot.addView(categorySection)
         categoryRoot.addView(itemContainer)
 
-        categorySection.findViewById<View>(
-            R.id.edit_category_bar
-        )?.let {
-            (it.parent as? ViewGroup)?.removeView(it)
-        }
-
         val idMap = SparseIntArray()
         regenerateViewIds(categoryRoot, idMap)
 
@@ -780,11 +805,9 @@ class Complete : AppCompatActivity() {
         newCategory.categoryName.text = ""
         newCategory.savedCategoryName = ""
 
-        // NEW CODE //
         for (item in newCategory.items) {
             clearItem(item)
         }
-        // NEW CODE //
 
         val categoryIndex = group.categories.indexOf(afterCategory) + 1
         val viewIndex = group.categoryContainer.indexOfChild(afterCategory.root) + 1
@@ -800,9 +823,9 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateRemoveVisibility(group)
     }
 
-    // NEW CODE //
     // ADD DUPLICATED ITEM
     private fun addItem(
         category: CategoryUi,
@@ -830,7 +853,8 @@ class Complete : AppCompatActivity() {
 
         val newItem = setupItem(
             root = itemSection,
-            idMap = idMap
+            idMap = idMap,
+            category = category
         )
 
         clearItem(newItem)
@@ -849,6 +873,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateRemoveVisibilityForCategory(category)
     }
 
     // ADD DUPLICATED BRAND ROW
@@ -884,7 +909,8 @@ class Complete : AppCompatActivity() {
 
         val newBrand = setupBrand(
             root = brandRow,
-            idMap = idMap
+            idMap = idMap,
+            item = item
         )
 
         clearBrand(newBrand)
@@ -902,6 +928,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateRemoveVisibilityForItem(item)
     }
 
     private fun clearItem(item: ItemUi) {
@@ -934,7 +961,6 @@ class Complete : AppCompatActivity() {
         brand.weightChanged = false
         brand.quantityChanged = false
     }
-    // NEW CODE //
 
     // ADD DUPLICATED PLACE
     private fun addGroup(
@@ -952,12 +978,6 @@ class Complete : AppCompatActivity() {
         val newGroup = tempRoot.findViewById<LinearLayout>(
             R.id.group
         )
-
-        newGroup.findViewById<View>(
-            R.id.edit_place_bar
-        )?.let {
-            (it.parent as? ViewGroup)?.removeView(it)
-        }
 
         val idMap = SparseIntArray()
         regenerateViewIds(newGroup, idMap)
@@ -1005,7 +1025,7 @@ class Complete : AppCompatActivity() {
             LinearLayout.LayoutParams.WRAP_CONTENT
         )
 
-        params.topMargin = dp(20)
+        params.topMargin = if (insertIndex == 0) 0 else dp(20)
 
         (newGroup.parent as? ViewGroup)?.removeView(newGroup)
 
@@ -1016,6 +1036,21 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+    }
+
+
+    // UPDATE PLACE SPACING
+    private fun updateGroupSpacing() {
+
+        for ((index, group) in groups.withIndex()) {
+
+            val params = group.root.layoutParams as? LinearLayout.LayoutParams
+                ?: continue
+
+            params.topMargin = if (index == 0) 0 else dp(20)
+
+            group.root.layoutParams = params
+        }
     }
 
     // LOAD GROUP DATA
@@ -1070,7 +1105,6 @@ class Complete : AppCompatActivity() {
                 1
             )
 
-            // NEW CODE //
             while (category.items.size < itemCount) {
                 addItem(category, category.items.last())
             }
@@ -1150,7 +1184,6 @@ class Complete : AppCompatActivity() {
                     }
                 )
             }
-            // NEW CODE //
 
             val categoryExpandedKey = if (categoryIndex == 0) {
                 key("category_expanded")
@@ -1224,7 +1257,6 @@ class Complete : AppCompatActivity() {
                     category.categoryExpanded
                 )
 
-                // NEW CODE //
                 dataEditor.putInt(
                     categoryKey("item_count"),
                     category.items.size
@@ -1286,7 +1318,6 @@ class Complete : AppCompatActivity() {
                         )
                     }
                 }
-                // NEW CODE //
             }
         }
 
@@ -1306,7 +1337,6 @@ class Complete : AppCompatActivity() {
                 category.savedCategoryName =
                     category.categoryName.text.toString()
 
-                // NEW CODE //
                 for (item in category.items) {
 
                     item.savedItemName = item.itemName.text.toString()
@@ -1319,7 +1349,6 @@ class Complete : AppCompatActivity() {
                         brand.savedQuantityName = brand.quantityName.text.toString()
                     }
                 }
-                // NEW CODE //
             }
         }
     }
@@ -1352,7 +1381,6 @@ class Complete : AppCompatActivity() {
                 category.categoryExpanded
             )
 
-            // NEW CODE //
             for ((itemIndex, item) in category.items.withIndex()) {
 
                 val itemKey = if (itemIndex == 0) {
@@ -1367,7 +1395,6 @@ class Complete : AppCompatActivity() {
                     item.itemExpanded
                 )
             }
-            // NEW CODE //
         }
 
         editor.apply()
@@ -1455,7 +1482,6 @@ class Complete : AppCompatActivity() {
         return root.findViewById(actualId)
     }
 
-    // NEW CODE //
     private fun <T : View> findInItem(
         item: ItemUi,
         originalId: Int
@@ -1496,7 +1522,6 @@ class Complete : AppCompatActivity() {
 
         return root.findViewById(actualId)
     }
-    // NEW CODE //
 
     // UPDATE DROPDOWN SYMBOLS
     private fun updateDropdownSymbols(group: GroupUi) {
@@ -1527,7 +1552,6 @@ class Complete : AppCompatActivity() {
                 includeFontPadding = false
             }
 
-            // NEW CODE //
             for (item in category.items) {
 
                 findInItem<TextView>(
@@ -1542,7 +1566,6 @@ class Complete : AppCompatActivity() {
                     includeFontPadding = false
                 }
             }
-            // NEW CODE //
         }
     }
 
@@ -1554,7 +1577,6 @@ class Complete : AppCompatActivity() {
             category.root.visibility =
                 if (group.placeExpanded) View.VISIBLE else View.GONE
 
-            // NEW CODE //
             for (item in category.items) {
 
                 item.root.visibility =
@@ -1578,7 +1600,6 @@ class Complete : AppCompatActivity() {
                         View.GONE
                     }
             }
-            // NEW CODE //
         }
 
         updateDropdownSymbols(group)
@@ -1603,7 +1624,7 @@ class Complete : AppCompatActivity() {
                 group,
                 R.id.c_p_sort
             )?.visibility =
-                if (editMode && group.isOriginal) {
+                if (editMode && groups.indexOf(group) == 0) {
                     View.VISIBLE
                 } else {
                     View.GONE
@@ -1629,7 +1650,12 @@ class Complete : AppCompatActivity() {
             findInGroup<View>(
                 group,
                 R.id.c_p_remove
-            )?.visibility = placeVisibility
+            )?.visibility =
+                if (placeVisibility == View.VISIBLE && groups.size > 1) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
 
             findInGroup<View>(
                 group,
@@ -1642,7 +1668,7 @@ class Complete : AppCompatActivity() {
                     category,
                     R.id.c_c_sort
                 )?.visibility =
-                    if (editMode && index == 0) {
+                    if (editMode && group.categories.indexOf(category) == 0) {
                         View.VISIBLE
                     } else {
                         View.GONE
@@ -1668,7 +1694,12 @@ class Complete : AppCompatActivity() {
                 findInCategory<View>(
                     category,
                     R.id.c_c_remove
-                )?.visibility = categoryVisibility
+                )?.visibility =
+                    if (categoryVisibility == View.VISIBLE && group.categories.size > 1) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
 
                 findInCategory<View>(
                     category,
@@ -1686,7 +1717,12 @@ class Complete : AppCompatActivity() {
                     findInItem<View>(
                         item,
                         R.id.c_i_sort
-                    )?.visibility = mainVisibility
+                    )?.visibility =
+                        if (editMode && category.items.indexOf(item) == 0) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
 
                     val itemVisibility =
                         if (editMode && item.itemEditExpanded) {
@@ -1703,7 +1739,12 @@ class Complete : AppCompatActivity() {
                     findInItem<View>(
                         item,
                         R.id.c_i_remove
-                    )?.visibility = itemVisibility
+                    )?.visibility =
+                        if (itemVisibility == View.VISIBLE && category.items.size > 1) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
 
                     findInItem<View>(
                         item,
@@ -1722,10 +1763,14 @@ class Complete : AppCompatActivity() {
                             brand.root,
                             brand.idMap,
                             R.id.c_i_b_remove
-                        )?.visibility = mainVisibility
+                        )?.visibility =
+                            if (editMode && item.brands.size > 1) {
+                                View.VISIBLE
+                            } else {
+                                View.GONE
+                            }
                     }
                 }
-                // NEW CODE //
             }
         }
     }
@@ -1735,6 +1780,9 @@ class Complete : AppCompatActivity() {
         textView: TextView,
         hint: String,
         savedName: String,
+        keyboardType: Int = InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE,
         onChanged: (Boolean) -> Unit
     ) {
 
@@ -1758,9 +1806,7 @@ class Complete : AppCompatActivity() {
                 textView.textSize /
                         resources.displayMetrics.scaledDensity
 
-            inputType = InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
-                    InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            inputType = keyboardType
 
             background = textView.background
             gravity = textView.gravity
@@ -1781,7 +1827,8 @@ class Complete : AppCompatActivity() {
                 start: Int,
                 count: Int,
                 after: Int
-            ) {}
+            ) {
+            }
 
             override fun onTextChanged(
                 s: CharSequence?,
@@ -1831,12 +1878,12 @@ class Complete : AppCompatActivity() {
     private fun resetChangeFlags(group: GroupUi) {
 
         group.placeChanged = false
+        structureChanged = false
 
         for (category in group.categories) {
 
             category.categoryChanged = false
 
-            // NEW CODE //
             for (item in category.items) {
 
                 item.itemChanged = false
@@ -1849,7 +1896,6 @@ class Complete : AppCompatActivity() {
                     brand.quantityChanged = false
                 }
             }
-            // NEW CODE //
         }
     }
 
@@ -1873,7 +1919,6 @@ class Complete : AppCompatActivity() {
 
                 category.categoryName.setTextColor(white)
 
-                // NEW CODE //
                 for (item in category.items) {
 
                     item.itemName.setTextColor(white)
@@ -1885,7 +1930,6 @@ class Complete : AppCompatActivity() {
                         brand.quantityName.setTextColor(muted)
                     }
                 }
-                // NEW CODE //
 
                 continue
             }
@@ -1894,7 +1938,6 @@ class Complete : AppCompatActivity() {
                 if (category.categoryChanged) white else muted
             )
 
-            // NEW CODE //
             for (item in category.items) {
 
                 item.itemName.setTextColor(
@@ -1920,20 +1963,59 @@ class Complete : AppCompatActivity() {
                     )
                 }
             }
-            // NEW CODE //
+        }
+    }
+
+    // GET CURRENT STRUCTURE
+    private fun currentStructure(): List<Any> {
+
+        val structure = mutableListOf<Any>()
+
+        for (group in groups) {
+
+            structure.add(group)
+
+            for (category in group.categories) {
+
+                structure.add(category)
+
+                for (item in category.items) {
+
+                    structure.add(item)
+
+                    for (brand in item.brands) {
+                        structure.add(brand)
+                    }
+                }
+            }
+        }
+
+        return structure
+    }
+
+    // CHECK STRUCTURE CHANGES
+    private fun hasStructureChanged(): Boolean {
+
+        val current = currentStructure()
+
+        if (current.size != originalStructure.size) {
+            return true
+        }
+
+        return current.indices.any { index ->
+            current[index] !== originalStructure[index]
         }
     }
 
     // CHECK CHANGES
     private fun hasChanges(): Boolean {
 
-        return groups.any { group ->
+        return structureChanged || groups.any { group ->
 
             group.placeChanged ||
                     group.categories.any { category ->
 
                         category.categoryChanged ||
-                                // NEW CODE //
                                 category.items.any { item ->
 
                                     item.itemChanged ||
@@ -1945,7 +2027,6 @@ class Complete : AppCompatActivity() {
                                                         brand.quantityChanged
                                             }
                                 }
-                        // NEW CODE //
                     }
         }
     }
@@ -1998,6 +2079,34 @@ class Complete : AppCompatActivity() {
             if (categoryNames.size != categoryNames.toSet().size) {
                 return false
             }
+
+            // BRAND + NAME + WEIGHT MUST NOT ALL MATCH
+            for (category in group.categories) {
+
+                for (item in category.items) {
+
+                    val brandCombinations = item.brands.map { brand ->
+
+                        listOf(
+                            normalize(brand.brandName.text),
+                            normalize(brand.nameName.text),
+                            normalize(brand.weightName.text)
+                        )
+                    }
+
+                    // Ignore completely empty rows when checking duplicates.
+                    val filledCombinations = brandCombinations.filter { values ->
+                        values.any { it.isNotEmpty() }
+                    }
+
+                    if (
+                        filledCombinations.size !=
+                        filledCombinations.toSet().size
+                    ) {
+                        return false
+                    }
+                }
+            }
         }
 
         return true
@@ -2021,7 +2130,84 @@ class Complete : AppCompatActivity() {
 
         editButton.backgroundTintList =
             ColorStateList.valueOf(
-                if (canSave) orange else gray
+                if (canSave) Color.rgb(255, 128, 0) else gray
             )
+    }
+
+    // REMOVE PLACE
+    private fun removeGroup(group: GroupUi) {
+
+        if (groups.size <= 1) return
+
+        groups.remove(group)
+        scroll.removeView(group.root)
+
+        structureChanged = true
+
+        updateGroupSpacing()
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
+    }
+
+    // REMOVE CATEGORY
+    private fun removeCategory(group: GroupUi, category: CategoryUi) {
+
+        if (group.categories.size <= 1) return
+
+        group.categories.remove(category)
+        group.categoryContainer.removeView(category.root)
+
+        structureChanged = true
+
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
+    }
+
+    // REMOVE ITEM
+    private fun removeItem(category: CategoryUi, item: ItemUi) {
+
+        if (category.items.size <= 1) return
+
+        category.items.remove(item)
+        category.itemContainer.removeView(item.root)
+
+        structureChanged = true
+
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
+    }
+
+    // REMOVE BRAND
+    private fun removeBrand(item: ItemUi, brand: BrandUi) {
+
+        if (item.brands.size <= 1) return
+
+        item.brands.remove(brand)
+        item.brandContainer.removeView(brand.root)
+
+        structureChanged = true
+
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
+    }
+
+    // UPDATE REMOVE BUTTON VISIBILITY
+    private fun updateRemoveVisibility(group: GroupUi) {
+        updateEditVisibility()
+    }
+
+    private fun updateRemoveVisibilityForCategory(category: CategoryUi) {
+        updateEditVisibility()
+    }
+
+    private fun updateRemoveVisibilityForItem(item: ItemUi) {
+        updateEditVisibility()
     }
 }
