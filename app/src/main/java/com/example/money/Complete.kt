@@ -40,12 +40,10 @@ class Complete : AppCompatActivity() {
     private lateinit var scroll: LinearLayout
     private lateinit var editButton: AppCompatButton
 
-    private data class GroupUi(
+    private data class CategoryUi(
         val root: LinearLayout,
         val idMap: SparseIntArray,
-        val isOriginal: Boolean,
 
-        val placeName: TextView,
         val categoryName: TextView,
         val itemName: TextView,
 
@@ -54,15 +52,12 @@ class Complete : AppCompatActivity() {
         val weightName: TextView,
         val quantityName: TextView,
 
-        var placeExpanded: Boolean = false,
         var categoryExpanded: Boolean = false,
         var itemExpanded: Boolean = false,
 
-        var placeEditExpanded: Boolean = false,
         var categoryEditExpanded: Boolean = false,
         var itemEditExpanded: Boolean = false,
 
-        var savedPlaceName: String = "",
         var savedCategoryName: String = "",
         var savedItemName: String = "",
 
@@ -71,7 +66,6 @@ class Complete : AppCompatActivity() {
         var savedWeightName: String = "",
         var savedQuantityName: String = "",
 
-        var placeChanged: Boolean = false,
         var categoryChanged: Boolean = false,
         var itemChanged: Boolean = false,
 
@@ -79,6 +73,23 @@ class Complete : AppCompatActivity() {
         var nameChanged: Boolean = false,
         var weightChanged: Boolean = false,
         var quantityChanged: Boolean = false
+    )
+
+    private data class GroupUi(
+        val root: LinearLayout,
+        val idMap: SparseIntArray,
+        val isOriginal: Boolean,
+
+        val placeName: TextView,
+        val categoryContainer: LinearLayout,
+
+        var placeExpanded: Boolean = false,
+        var placeEditExpanded: Boolean = false,
+
+        var savedPlaceName: String = "",
+        var placeChanged: Boolean = false,
+
+        val categories: MutableList<CategoryUi> = mutableListOf()
     )
 
     private val groups = mutableListOf<GroupUi>()
@@ -142,11 +153,20 @@ class Complete : AppCompatActivity() {
         originalGroup.placeExpanded =
             statePreferences.getBoolean("place_expanded", false)
 
-        originalGroup.categoryExpanded =
-            statePreferences.getBoolean("category_expanded", false)
+        for ((index, category) in originalGroup.categories.withIndex()) {
 
-        originalGroup.itemExpanded =
-            statePreferences.getBoolean("item_expanded", false)
+            category.categoryExpanded = statePreferences.getBoolean(
+                if (index == 0) "category_expanded"
+                else "category_${index}_expanded",
+                false
+            )
+
+            category.itemExpanded = statePreferences.getBoolean(
+                if (index == 0) "item_expanded"
+                else "category_${index}_item_expanded",
+                false
+            )
+        }
 
         // RESTORE DUPLICATED PLACES
         val savedGroupCount = dataPreferences.getInt(
@@ -171,11 +191,15 @@ class Complete : AppCompatActivity() {
                 editMode = true
 
                 for (group in groups) {
+
                     resetChangeFlags(group)
 
                     group.placeEditExpanded = false
-                    group.categoryEditExpanded = false
-                    group.itemEditExpanded = false
+
+                    for (category in group.categories) {
+                        category.categoryEditExpanded = false
+                        category.itemEditExpanded = false
+                    }
                 }
 
                 updateEditVisibility()
@@ -206,11 +230,15 @@ class Complete : AppCompatActivity() {
                 editMode = false
 
                 for (group in groups) {
+
                     resetChangeFlags(group)
 
                     group.placeEditExpanded = false
-                    group.categoryEditExpanded = false
-                    group.itemEditExpanded = false
+
+                    for (category in group.categories) {
+                        category.categoryEditExpanded = false
+                        category.itemEditExpanded = false
+                    }
                 }
 
                 updateEditVisibility()
@@ -238,36 +266,64 @@ class Complete : AppCompatActivity() {
             isOriginal = isOriginal,
 
             placeName = findInGroup(root, idMap, R.id.a_p_name)!!,
-            categoryName = findInGroup(root, idMap, R.id.a_c_name)!!,
-            itemName = findInGroup(root, idMap, R.id.a_i_name)!!,
-
-            brandName = findInGroup(root, idMap, R.id.a_b_brand)!!,
-            nameName = findInGroup(root, idMap, R.id.a_b_name)!!,
-            weightName = findInGroup(root, idMap, R.id.a_b_weight)!!,
-            quantityName = findInGroup(root, idMap, R.id.a_b_quantity)!!
+            categoryContainer = root
         )
 
-        // PLACEHOLDERS ARE HINTS, NOT TEXT
-        val placeholders = listOf(
-            group.placeName to "[Place]",
-            group.categoryName to "[Category]",
-            group.itemName to "[Item]",
-            group.brandName to "[Brand]",
-            group.nameName to "[Name]",
-            group.weightName to "[Weight]",
-            group.quantityName to "[Quantity]"
-        )
-
-        for ((textView, placeholder) in placeholders) {
-            if (textView.text.toString() == placeholder) {
-                textView.text = ""
-            }
-
-            textView.hint = placeholder
+        // PLACEHOLDER
+        if (group.placeName.text.toString() == "[Place]") {
+            group.placeName.text = ""
         }
 
+        group.placeName.hint = "[Place]"
+
+        // FIND CATEGORY AND ITEM SECTIONS
+        val categorySection = findInGroup<LinearLayout>(
+            root,
+            idMap,
+            R.id.category_section
+        )!!
+
+        val itemSection = findInGroup<LinearLayout>(
+            root,
+            idMap,
+            R.id.item_section
+        )!!
+
+        // DETACH BOTH SECTIONS
+        (categorySection.parent as? ViewGroup)?.removeView(categorySection)
+        (itemSection.parent as? ViewGroup)?.removeView(itemSection)
+
+        // CREATE THE FIRST CATEGORY CONTAINER
+        val categoryRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        categoryRoot.addView(categorySection)
+        categoryRoot.addView(itemSection)
+
+        // ADD CATEGORY CONTAINER TO PLACE
+        root.addView(categoryRoot)
+
+        // SET UP FIRST CATEGORY
+        // REUSE THE PLACE ID MAP
+        val firstCategory = setupCategory(
+            group = group,
+            root = categoryRoot,
+            idMap = idMap
+        )
+
+        group.categories.add(firstCategory)
+
         // PLACE DROPDOWN
-        findInGroup<View>(group, R.id.a_p_expand)?.setOnClickListener {
+        findInGroup<View>(
+            group,
+            R.id.a_p_expand
+        )?.setOnClickListener {
 
             group.placeExpanded = !group.placeExpanded
 
@@ -275,52 +331,14 @@ class Complete : AppCompatActivity() {
             updateGroupExpansion(group)
         }
 
-        // CATEGORY DROPDOWN
-        findInGroup<View>(group, R.id.a_c_expand)?.setOnClickListener {
-
-            group.categoryExpanded = !group.categoryExpanded
-
-            saveExpansionState(group)
-            updateGroupExpansion(group)
-        }
-
-        // ITEM DROPDOWN
-        findInGroup<View>(group, R.id.a_i_expand)?.setOnClickListener {
-
-            group.itemExpanded = !group.itemExpanded
-
-            saveExpansionState(group)
-            updateGroupExpansion(group)
-        }
-
         // PLACE EDIT BUTTON
-        findInGroup<View>(group, R.id.c_p_edit)?.setOnClickListener {
+        findInGroup<View>(
+            group,
+            R.id.c_p_edit
+        )?.setOnClickListener {
 
             if (editMode) {
-                group.placeEditExpanded =
-                    !group.placeEditExpanded
-
-                updateEditVisibility()
-            }
-        }
-
-        // CATEGORY EDIT BUTTON
-        findInGroup<View>(group, R.id.c_c_edit)?.setOnClickListener {
-
-            if (editMode) {
-                group.categoryEditExpanded =
-                    !group.categoryEditExpanded
-
-                updateEditVisibility()
-            }
-        }
-
-        // ITEM EDIT BUTTON
-        findInGroup<View>(group, R.id.c_i_edit)?.setOnClickListener {
-
-            if (editMode) {
-                group.itemEditExpanded =
-                    !group.itemEditExpanded
+                group.placeEditExpanded = !group.placeEditExpanded
 
                 updateEditVisibility()
             }
@@ -328,103 +346,16 @@ class Complete : AppCompatActivity() {
 
         // PLACE NAME
         group.placeName.setOnClickListener {
+
             if (editMode) {
                 editName(
                     group.placeName,
                     "[Place]",
                     group.savedPlaceName
                 ) { changed ->
+
                     group.placeChanged = changed
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
 
-        // CATEGORY NAME
-        group.categoryName.setOnClickListener {
-            if (editMode) {
-                editName(
-                    group.categoryName,
-                    "[Category]",
-                    group.savedCategoryName
-                ) { changed ->
-                    group.categoryChanged = changed
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // ITEM NAME
-        group.itemName.setOnClickListener {
-            if (editMode) {
-                editName(
-                    group.itemName,
-                    "[Item]",
-                    group.savedItemName
-                ) { changed ->
-                    group.itemChanged = changed
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // BRAND HEADER
-        group.brandName.setOnClickListener {
-            if (editMode) {
-                editName(
-                    group.brandName,
-                    "[Brand]",
-                    group.savedBrandName
-                ) { changed ->
-                    group.brandChanged = changed
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // NAME HEADER
-        group.nameName.setOnClickListener {
-            if (editMode) {
-                editName(
-                    group.nameName,
-                    "[Name]",
-                    group.savedNameName
-                ) { changed ->
-                    group.nameChanged = changed
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // WEIGHT HEADER
-        group.weightName.setOnClickListener {
-            if (editMode) {
-                editName(
-                    group.weightName,
-                    "[Weight]",
-                    group.savedWeightName
-                ) { changed ->
-                    group.weightChanged = changed
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // QUANTITY HEADER
-        group.quantityName.setOnClickListener {
-            if (editMode) {
-                editName(
-                    group.quantityName,
-                    "[Quantity]",
-                    group.savedQuantityName
-                ) { changed ->
-                    group.quantityChanged = changed
                     updateAllNameColors()
                     updateSaveButton()
                 }
@@ -432,11 +363,303 @@ class Complete : AppCompatActivity() {
         }
 
         // ADD PLACE
-        findInGroup<View>(group, R.id.c_p_add)?.setOnClickListener {
+        findInGroup<View>(
+            group,
+            R.id.c_p_add
+        )?.setOnClickListener {
             addGroup(afterGroup = group)
         }
 
         return group
+    }
+
+    // SETUP CATEGORY
+    private fun setupCategory(
+        group: GroupUi,
+        root: LinearLayout,
+        idMap: SparseIntArray
+    ): CategoryUi {
+
+        val category = CategoryUi(
+            root = root,
+            idMap = idMap,
+
+            categoryName = findInCategory(root, idMap, R.id.a_c_name)!!,
+            itemName = findInCategory(root, idMap, R.id.a_i_name)!!,
+
+            brandName = findInCategory(root, idMap, R.id.a_b_brand)!!,
+            nameName = findInCategory(root, idMap, R.id.a_b_name)!!,
+            weightName = findInCategory(root, idMap, R.id.a_b_weight)!!,
+            quantityName = findInCategory(root, idMap, R.id.a_b_quantity)!!
+        )
+
+        // PLACEHOLDERS
+        val placeholders = listOf(
+            category.categoryName to "[Category]",
+            category.itemName to "[Item]",
+            category.brandName to "[Brand]",
+            category.nameName to "[Name]",
+            category.weightName to "[Weight]",
+            category.quantityName to "[Quantity]"
+        )
+
+        for ((textView, placeholder) in placeholders) {
+
+            if (textView.text.toString() == placeholder) {
+                textView.text = ""
+            }
+
+            textView.hint = placeholder
+        }
+
+        // CATEGORY DROPDOWN
+        findInCategory<View>(category, R.id.a_c_expand)?.setOnClickListener {
+
+            category.categoryExpanded = !category.categoryExpanded
+
+            saveExpansionState(group)
+            updateGroupExpansion(group)
+        }
+
+        // ITEM DROPDOWN
+        findInCategory<View>(category, R.id.a_i_expand)?.setOnClickListener {
+
+            category.itemExpanded = !category.itemExpanded
+
+            saveExpansionState(group)
+            updateGroupExpansion(group)
+        }
+
+        // CATEGORY EDIT BUTTON
+        findInCategory<View>(category, R.id.c_c_edit)?.setOnClickListener {
+
+            if (editMode) {
+                category.categoryEditExpanded =
+                    !category.categoryEditExpanded
+
+                updateEditVisibility()
+            }
+        }
+
+        // ITEM EDIT BUTTON
+        findInCategory<View>(category, R.id.c_i_edit)?.setOnClickListener {
+
+            if (editMode) {
+                category.itemEditExpanded =
+                    !category.itemEditExpanded
+
+                updateEditVisibility()
+            }
+        }
+
+        // CATEGORY NAME
+        category.categoryName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    category.categoryName,
+                    "[Category]",
+                    category.savedCategoryName
+                ) { changed ->
+
+                    category.categoryChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // ITEM NAME
+        category.itemName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    category.itemName,
+                    "[Item]",
+                    category.savedItemName
+                ) { changed ->
+
+                    category.itemChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // BRAND HEADER
+        category.brandName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    category.brandName,
+                    "[Brand]",
+                    category.savedBrandName
+                ) { changed ->
+
+                    category.brandChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // NAME HEADER
+        category.nameName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    category.nameName,
+                    "[Name]",
+                    category.savedNameName
+                ) { changed ->
+
+                    category.nameChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // WEIGHT HEADER
+        category.weightName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    category.weightName,
+                    "[Weight]",
+                    category.savedWeightName
+                ) { changed ->
+
+                    category.weightChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // QUANTITY HEADER
+        category.quantityName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    category.quantityName,
+                    "[Quantity]",
+                    category.savedQuantityName
+                ) { changed ->
+
+                    category.quantityChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // ADD CATEGORY
+        findInCategory<View>(category, R.id.c_c_add)?.setOnClickListener {
+            addCategory(group, category)
+        }
+
+        return category
+    }
+
+    // ADD DUPLICATED CATEGORY
+    private fun addCategory(
+        group: GroupUi,
+        afterCategory: CategoryUi
+    ) {
+
+        // INFLATE A FRESH LAYOUT
+        val tempRoot = layoutInflater.inflate(
+            R.layout.complete,
+            null,
+            false
+        ) as ViewGroup
+
+        val tempGroup = tempRoot.findViewById<LinearLayout>(
+            R.id.group
+        )
+
+        val categorySection = tempGroup.findViewById<LinearLayout>(
+            R.id.category_section
+        )
+
+        val itemSection = tempGroup.findViewById<LinearLayout>(
+            R.id.item_section
+        )
+
+        // DETACH BOTH SECTIONS
+        (categorySection.parent as? ViewGroup)?.removeView(categorySection)
+        (itemSection.parent as? ViewGroup)?.removeView(itemSection)
+
+        // CREATE CATEGORY ROOT
+        val categoryRoot = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        categoryRoot.addView(categorySection)
+        categoryRoot.addView(itemSection)
+
+        // REMOVE THE EXTRA CATEGORY SORT BAR
+        categoryRoot.findViewById<View>(
+            R.id.edit_category_bar
+        )?.let {
+            (it.parent as? ViewGroup)?.removeView(it)
+        }
+
+        // GENERATE UNIQUE IDS
+        val idMap = SparseIntArray()
+        regenerateViewIds(categoryRoot, idMap)
+
+        // SETUP NEW CATEGORY
+        val newCategory = setupCategory(
+            group = group,
+            root = categoryRoot,
+            idMap = idMap
+        )
+
+        // CLEAR NEW CATEGORY VALUES
+        newCategory.categoryName.text = ""
+        newCategory.itemName.text = ""
+
+        newCategory.brandName.text = ""
+        newCategory.nameName.text = ""
+        newCategory.weightName.text = ""
+        newCategory.quantityName.text = ""
+
+        newCategory.savedCategoryName = ""
+        newCategory.savedItemName = ""
+
+        newCategory.savedBrandName = ""
+        newCategory.savedNameName = ""
+        newCategory.savedWeightName = ""
+        newCategory.savedQuantityName = ""
+
+        // INSERT AFTER THE SELECTED CATEGORY
+        val categoryIndex = group.categories.indexOf(afterCategory) + 1
+        val viewIndex = group.categoryContainer.indexOfChild(afterCategory.root) + 1
+
+        group.categories.add(categoryIndex, newCategory)
+
+        group.categoryContainer.addView(
+            categoryRoot,
+            viewIndex
+        )
+
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
     }
 
     // ADD DUPLICATED PLACE
@@ -456,28 +679,25 @@ class Complete : AppCompatActivity() {
             R.id.group
         )
 
-        (newGroup.parent as? ViewGroup)?.removeView(newGroup)
-
         // REMOVE DUPLICATE PLACE EDIT BAR
-        val editPlaceBar = newGroup.findViewById<View>(
+        newGroup.findViewById<View>(
             R.id.edit_place_bar
-        )
-
-        (editPlaceBar.parent as? ViewGroup)?.removeView(editPlaceBar)
+        )?.let {
+            (it.parent as? ViewGroup)?.removeView(it)
+        }
 
         // GENERATE UNIQUE IDS
         val idMap = SparseIntArray()
-
         regenerateViewIds(newGroup, idMap)
 
-        // SETUP DUPLICATE
+        // SETUP DUPLICATE PLACE
         val newGroupUi = setupGroup(
             root = newGroup,
             idMap = idMap,
             isOriginal = false
         )
 
-        // INSERT AFTER THE SELECTED PLACE
+        // INSERT AFTER SELECTED PLACE
         val insertIndex = if (afterGroup != null) {
             groups.indexOf(afterGroup) + 1
         } else {
@@ -488,33 +708,38 @@ class Complete : AppCompatActivity() {
 
         // LOAD SAVED DATA OR INITIALIZE NEW PLACE
         if (restoreIndex != null) {
+
             loadGroupData(newGroupUi, restoreIndex)
+
         } else {
+
             newGroupUi.placeName.text = ""
-            newGroupUi.categoryName.text = ""
-            newGroupUi.itemName.text = ""
-
-            newGroupUi.brandName.text = ""
-            newGroupUi.nameName.text = ""
-            newGroupUi.weightName.text = ""
-            newGroupUi.quantityName.text = ""
-
             newGroupUi.savedPlaceName = ""
-            newGroupUi.savedCategoryName = ""
-            newGroupUi.savedItemName = ""
 
-            newGroupUi.savedBrandName = ""
-            newGroupUi.savedNameName = ""
-            newGroupUi.savedWeightName = ""
-            newGroupUi.savedQuantityName = ""
+            for (category in newGroupUi.categories) {
+
+                category.categoryName.text = ""
+                category.itemName.text = ""
+
+                category.brandName.text = ""
+                category.nameName.text = ""
+                category.weightName.text = ""
+                category.quantityName.text = ""
+
+                category.savedCategoryName = ""
+                category.savedItemName = ""
+
+                category.savedBrandName = ""
+                category.savedNameName = ""
+                category.savedWeightName = ""
+                category.savedQuantityName = ""
+
+                category.categoryExpanded = false
+                category.itemExpanded = false
+            }
 
             newGroupUi.placeExpanded = false
-            newGroupUi.categoryExpanded = false
-            newGroupUi.itemExpanded = false
         }
-
-        updateDropdownSymbols(newGroupUi)
-        updateGroupExpansion(newGroupUi)
 
         // ADD WITH 20DP SPACING
         val params = LinearLayout.LayoutParams(
@@ -524,19 +749,17 @@ class Complete : AppCompatActivity() {
 
         params.topMargin = dp(20)
 
-        // INSERT VISUALLY AFTER THE SELECTED PLACE
-        scroll.addView(
-            newGroup,
-            insertIndex,
-            params
-        )
+        // REMOVE FROM ORIGINAL INFLATED PARENT
+        (newGroup.parent as? android.view.ViewGroup)?.removeView(newGroup)
 
+        // ADD TO SCROLL CONTAINER
+        scroll.addView(newGroup, insertIndex, params)
+
+        updateDropdownSymbols(newGroupUi)
+        updateGroupExpansion(newGroupUi)
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
-
-        // Do not save automatically.
-        // Changes are SAVED only when the Save button is pressed.
     }
 
     // LOAD GROUP DATA
@@ -553,60 +776,108 @@ class Complete : AppCompatActivity() {
             }
         }
 
+        // LOAD PLACE
         group.placeName.text = dataPreferences.getString(
-            key("place_name"), ""
-        ) ?: ""
-
-        group.categoryName.text = dataPreferences.getString(
-            key("category_name"), ""
-        ) ?: ""
-
-        group.itemName.text = dataPreferences.getString(
-            key("item_name"), ""
-        ) ?: ""
-
-        group.brandName.text = dataPreferences.getString(
-            key("brand_name"), ""
-        ) ?: ""
-
-        group.nameName.text = dataPreferences.getString(
-            key("name_name"), ""
-        ) ?: ""
-
-        group.weightName.text = dataPreferences.getString(
-            key("weight_name"), ""
-        ) ?: ""
-
-        group.quantityName.text = dataPreferences.getString(
-            key("quantity_name"), ""
+            key("place_name"),
+            ""
         ) ?: ""
 
         group.savedPlaceName = group.placeName.text.toString()
-        group.savedCategoryName = group.categoryName.text.toString()
-        group.savedItemName = group.itemName.text.toString()
 
-        group.savedBrandName = group.brandName.text.toString()
-        group.savedNameName = group.nameName.text.toString()
-        group.savedWeightName = group.weightName.text.toString()
-        group.savedQuantityName = group.quantityName.text.toString()
+        // LOAD CATEGORY COUNT
+        val categoryCount = dataPreferences.getInt(
+            key("category_count"),
+            1
+        )
 
-        if (index > 0) {
+        // CREATE ADDITIONAL CATEGORIES
+        while (group.categories.size < categoryCount) {
 
-            group.placeExpanded = statePreferences.getBoolean(
-                "group_${index}_place_expanded",
+            addCategory(
+                group,
+                group.categories.last()
+            )
+        }
+
+        // LOAD EACH CATEGORY
+        for ((categoryIndex, category) in group.categories.withIndex()) {
+
+            fun categoryKey(name: String): String {
+                return if (categoryIndex == 0) {
+                    key(name)
+                } else {
+                    key("category_${categoryIndex}_$name")
+                }
+            }
+
+            category.categoryName.text = dataPreferences.getString(
+                categoryKey("category_name"),
+                ""
+            ) ?: ""
+
+            category.itemName.text = dataPreferences.getString(
+                categoryKey("item_name"),
+                ""
+            ) ?: ""
+
+            category.brandName.text = dataPreferences.getString(
+                categoryKey("brand_name"),
+                ""
+            ) ?: ""
+
+            category.nameName.text = dataPreferences.getString(
+                categoryKey("name_name"),
+                ""
+            ) ?: ""
+
+            category.weightName.text = dataPreferences.getString(
+                categoryKey("weight_name"),
+                ""
+            ) ?: ""
+
+            category.quantityName.text = dataPreferences.getString(
+                categoryKey("quantity_name"),
+                ""
+            ) ?: ""
+
+            // UPDATE SAVED VALUES
+            category.savedCategoryName = category.categoryName.text.toString()
+            category.savedItemName = category.itemName.text.toString()
+
+            category.savedBrandName = category.brandName.text.toString()
+            category.savedNameName = category.nameName.text.toString()
+            category.savedWeightName = category.weightName.text.toString()
+            category.savedQuantityName = category.quantityName.text.toString()
+
+            // CATEGORY EXPANSION KEYS
+            val categoryExpandedKey = if (categoryIndex == 0) {
+                key("category_expanded")
+            } else {
+                key("category_${categoryIndex}_expanded")
+            }
+
+            val itemExpandedKey = if (categoryIndex == 0) {
+                key("item_expanded")
+            } else {
+                key("category_${categoryIndex}_item_expanded")
+            }
+
+            category.categoryExpanded = statePreferences.getBoolean(
+                categoryExpandedKey,
                 false
             )
 
-            group.categoryExpanded = statePreferences.getBoolean(
-                "group_${index}_category_expanded",
-                false
-            )
-
-            group.itemExpanded = statePreferences.getBoolean(
-                "group_${index}_item_expanded",
+            category.itemExpanded = statePreferences.getBoolean(
+                itemExpandedKey,
                 false
             )
         }
+
+        // LOAD PLACE EXPANSION
+        group.placeExpanded = statePreferences.getBoolean(
+            key("place_expanded"),
+            false
+        )
     }
 
     // SAVE ALL GROUPS
@@ -627,58 +898,87 @@ class Complete : AppCompatActivity() {
                 }
             }
 
+            // SAVE PLACE
             dataEditor.putString(
                 key("place_name"),
                 group.placeName.text.toString()
             )
 
-            dataEditor.putString(
-                key("category_name"),
-                group.categoryName.text.toString()
+            // SAVE CATEGORY COUNT
+            dataEditor.putInt(
+                key("category_count"),
+                group.categories.size
             )
 
-            dataEditor.putString(
-                key("item_name"),
-                group.itemName.text.toString()
-            )
-
-            dataEditor.putString(
-                key("brand_name"),
-                group.brandName.text.toString()
-            )
-
-            dataEditor.putString(
-                key("name_name"),
-                group.nameName.text.toString()
-            )
-
-            dataEditor.putString(
-                key("weight_name"),
-                group.weightName.text.toString()
-            )
-
-            dataEditor.putString(
-                key("quantity_name"),
-                group.quantityName.text.toString()
-            )
-
+            // SAVE PLACE EXPANSION
             stateEditor.putBoolean(
-                if (index == 0) "place_expanded"
-                else "group_${index}_place_expanded",
+                key("place_expanded"),
                 group.placeExpanded
             )
 
-            stateEditor.putBoolean(
-                if (index == 0) "category_expanded"
-                else "group_${index}_category_expanded",
-                group.categoryExpanded
-            )
+            // SAVE CATEGORIES
+            for ((categoryIndex, category) in group.categories.withIndex()) {
 
-            stateEditor.putBoolean(
-                if (index == 0) "item_expanded"
-                else "group_${index}_item_expanded",
-                group.itemExpanded
-            )
+                fun categoryKey(name: String): String {
+                    return if (categoryIndex == 0) {
+                        key(name)
+                    } else {
+                        key("category_${categoryIndex}_$name")
+                    }
+                }
+
+                dataEditor.putString(
+                    categoryKey("category_name"),
+                    category.categoryName.text.toString()
+                )
+
+                dataEditor.putString(
+                    categoryKey("item_name"),
+                    category.itemName.text.toString()
+                )
+
+                dataEditor.putString(
+                    categoryKey("brand_name"),
+                    category.brandName.text.toString()
+                )
+
+                dataEditor.putString(
+                    categoryKey("name_name"),
+                    category.nameName.text.toString()
+                )
+
+                dataEditor.putString(
+                    categoryKey("weight_name"),
+                    category.weightName.text.toString()
+                )
+
+                dataEditor.putString(
+                    categoryKey("quantity_name"),
+                    category.quantityName.text.toString()
+                )
+
+                stateEditor.putBoolean(
+                    key(
+                        if (categoryIndex == 0) {
+                            "category_expanded"
+                        } else {
+                            "category_${categoryIndex}_expanded"
+                        }
+                    ),
+                    category.categoryExpanded
+                )
+
+                stateEditor.putBoolean(
+                    key(
+                        if (categoryIndex == 0) {
+                            "item_expanded"
+                        } else {
+                            "category_${categoryIndex}_item_expanded"
+                        }
+                    ),
+                    category.itemExpanded
+                )
+            }
         }
 
         dataEditor.apply()
@@ -691,41 +991,76 @@ class Complete : AppCompatActivity() {
         for (group in groups) {
 
             group.savedPlaceName = group.placeName.text.toString()
-            group.savedCategoryName = group.categoryName.text.toString()
-            group.savedItemName = group.itemName.text.toString()
 
-            group.savedBrandName = group.brandName.text.toString()
-            group.savedNameName = group.nameName.text.toString()
-            group.savedWeightName = group.weightName.text.toString()
-            group.savedQuantityName = group.quantityName.text.toString()
+            for (category in group.categories) {
+
+                category.savedCategoryName =
+                    category.categoryName.text.toString()
+
+                category.savedItemName =
+                    category.itemName.text.toString()
+
+                category.savedBrandName =
+                    category.brandName.text.toString()
+
+                category.savedNameName =
+                    category.nameName.text.toString()
+
+                category.savedWeightName =
+                    category.weightName.text.toString()
+
+                category.savedQuantityName =
+                    category.quantityName.text.toString()
+            }
         }
     }
 
     // SAVE EXPANSION STATE
     private fun saveExpansionState(group: GroupUi) {
 
-        val index = groups.indexOf(group)
+        val groupIndex = groups.indexOf(group)
 
-        val prefix = if (index == 0) {
-            ""
-        } else {
-            "group_${index}_"
+        fun key(name: String): String {
+            return if (groupIndex == 0) {
+                name
+            } else {
+                "group_${groupIndex}_$name"
+            }
         }
 
-        statePreferences.edit()
-            .putBoolean(
-                "${prefix}place_expanded",
-                group.placeExpanded
+        val editor = statePreferences.edit()
+
+        editor.putBoolean(
+            key("place_expanded"),
+            group.placeExpanded
+        )
+
+        for ((categoryIndex, category) in group.categories.withIndex()) {
+
+            val categoryExpandedKey = if (categoryIndex == 0) {
+                key("category_expanded")
+            } else {
+                key("category_${categoryIndex}_expanded")
+            }
+
+            val itemExpandedKey = if (categoryIndex == 0) {
+                key("item_expanded")
+            } else {
+                key("category_${categoryIndex}_item_expanded")
+            }
+
+            editor.putBoolean(
+                categoryExpandedKey,
+                category.categoryExpanded
             )
-            .putBoolean(
-                "${prefix}category_expanded",
-                group.categoryExpanded
+
+            editor.putBoolean(
+                itemExpandedKey,
+                category.itemExpanded
             )
-            .putBoolean(
-                "${prefix}item_expanded",
-                group.itemExpanded
-            )
-            .apply()
+        }
+
+        editor.apply()
     }
 
     // GENERATE UNIQUE IDS
@@ -755,7 +1090,7 @@ class Complete : AppCompatActivity() {
         }
     }
 
-    // FIND VIEW
+    // FIND VIEW IN GROUP
     private fun <T : View> findInGroup(
         group: GroupUi,
         originalId: Int
@@ -784,20 +1119,70 @@ class Complete : AppCompatActivity() {
         return root.findViewById(actualId)
     }
 
+    // FIND VIEW IN CATEGORY
+    private fun <T : View> findInCategory(
+        category: CategoryUi,
+        originalId: Int
+    ): T? {
+
+        val actualId = category.idMap.get(
+            originalId,
+            originalId
+        )
+
+        return category.root.findViewById(actualId)
+    }
+
+    // FIND VIEW IN CATEGORY ROOT
+    private fun <T : View> findInCategory(
+        root: View,
+        idMap: SparseIntArray,
+        originalId: Int
+    ): T? {
+
+        val actualId = idMap.get(
+            originalId,
+            originalId
+        )
+
+        return root.findViewById(actualId)
+    }
+
     // UPDATE DROPDOWN SYMBOLS
     private fun updateDropdownSymbols(group: GroupUi) {
 
-        val symbols = listOf(
-            R.id.a_p_expand to group.placeExpanded,
-            R.id.a_c_expand to group.categoryExpanded,
-            R.id.a_i_expand to group.itemExpanded
-        )
+        findInGroup<TextView>(
+            group,
+            R.id.a_p_expand
+        )?.apply {
 
-        for ((id, expanded) in symbols) {
+            text = if (group.placeExpanded) "v" else ">"
 
-            findInGroup<TextView>(group, id)?.apply {
+            textSize = 20f
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+        }
 
-                text = if (expanded) "v" else ">"
+        for (category in group.categories) {
+
+            findInCategory<TextView>(
+                category,
+                R.id.a_c_expand
+            )?.apply {
+
+                text = if (category.categoryExpanded) "v" else ">"
+
+                textSize = 20f
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+            }
+
+            findInCategory<TextView>(
+                category,
+                R.id.a_i_expand
+            )?.apply {
+
+                text = if (category.itemExpanded) "v" else ">"
 
                 textSize = 20f
                 gravity = Gravity.CENTER
@@ -809,35 +1194,38 @@ class Complete : AppCompatActivity() {
     // UPDATE ONE GROUP'S EXPANSION
     private fun updateGroupExpansion(group: GroupUi) {
 
-        findInGroup<View>(
-            group,
-            R.id.category_section
-        )?.visibility =
-            if (group.placeExpanded) View.VISIBLE else View.GONE
+        for (category in group.categories) {
 
-        findInGroup<View>(
-            group,
-            R.id.item_section
-        )?.visibility =
-            if (group.placeExpanded && group.categoryExpanded) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            // CATEGORY AND ITEM CONTAINER
+            category.root.visibility =
+                if (group.placeExpanded) View.VISIBLE else View.GONE
 
-        findInGroup<View>(
-            group,
-            R.id.item_brand_bar
-        )?.visibility =
-            if (
-                group.placeExpanded &&
-                group.categoryExpanded &&
-                group.itemExpanded
-            ) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            // ITEM SECTION
+            findInCategory<View>(
+                category,
+                R.id.item_section
+            )?.visibility =
+                if (group.placeExpanded && category.categoryExpanded) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+
+            // BRAND HEADER
+            findInCategory<View>(
+                category,
+                R.id.item_brand_bar
+            )?.visibility =
+                if (
+                    group.placeExpanded &&
+                    category.categoryExpanded &&
+                    category.itemExpanded
+                ) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+        }
 
         updateDropdownSymbols(group)
     }
@@ -855,49 +1243,24 @@ class Complete : AppCompatActivity() {
 
         for (group in groups) {
 
-            // MAIN EDIT MODE CONTROLS
             val mainVisibility =
                 if (editMode) View.VISIBLE else View.GONE
 
+            // PLACE SORT
             findInGroup<View>(
                 group,
                 R.id.c_p_sort
-            )?.visibility = mainVisibility
+            )?.visibility =
+                if (editMode && group.isOriginal) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
 
-            findInGroup<View>(
-                group,
-                R.id.c_c_sort
-            )?.visibility = mainVisibility
-
-            findInGroup<View>(
-                group,
-                R.id.c_i_sort
-            )?.visibility = mainVisibility
-
+            // PLACE EDIT BUTTON
             findInGroup<View>(
                 group,
                 R.id.c_p_edit
-            )?.visibility = mainVisibility
-
-            findInGroup<View>(
-                group,
-                R.id.c_c_edit
-            )?.visibility = mainVisibility
-
-            findInGroup<View>(
-                group,
-                R.id.c_i_edit
-            )?.visibility = mainVisibility
-
-            // BRAND CONTROLS APPEAR AUTOMATICALLY IN EDIT MODE
-            findInGroup<View>(
-                group,
-                R.id.c_i_b_add
-            )?.visibility = mainVisibility
-
-            findInGroup<View>(
-                group,
-                R.id.c_i_b_remove
             )?.visibility = mainVisibility
 
             // PLACE CONTROLS
@@ -923,51 +1286,95 @@ class Complete : AppCompatActivity() {
                 R.id.c_p_add_list
             )?.visibility = placeVisibility
 
-            // CATEGORY CONTROLS
-            val categoryVisibility =
-                if (editMode && group.categoryEditExpanded) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
+            // EACH CATEGORY HAS ITS OWN CONTROLS
+            for ((index, category) in group.categories.withIndex()) {
 
-            findInGroup<View>(
-                group,
-                R.id.c_c_add
-            )?.visibility = categoryVisibility
+                // CATEGORY SORT ONLY ONCE PER PLACE
+                findInCategory<View>(
+                    category,
+                    R.id.c_c_sort
+                )?.visibility =
+                    if (editMode && index == 0) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
 
-            findInGroup<View>(
-                group,
-                R.id.c_c_remove
-            )?.visibility = categoryVisibility
+                // CATEGORY EDIT BUTTON
+                findInCategory<View>(
+                    category,
+                    R.id.c_c_edit
+                )?.visibility = mainVisibility
 
-            findInGroup<View>(
-                group,
-                R.id.c_c_add_list
-            )?.visibility = categoryVisibility
+                // ITEM EDIT BUTTON
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_edit
+                )?.visibility = mainVisibility
 
-            // ITEM CONTROLS
-            val itemVisibility =
-                if (editMode && group.itemEditExpanded) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
+                // ITEM SORT
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_sort
+                )?.visibility = mainVisibility
 
-            findInGroup<View>(
-                group,
-                R.id.c_i_add
-            )?.visibility = itemVisibility
+                // BRAND CONTROLS
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_b_add
+                )?.visibility = mainVisibility
 
-            findInGroup<View>(
-                group,
-                R.id.c_i_remove
-            )?.visibility = itemVisibility
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_b_remove
+                )?.visibility = mainVisibility
 
-            findInGroup<View>(
-                group,
-                R.id.c_i_add_list
-            )?.visibility = itemVisibility
+                // CATEGORY CONTROLS
+                val categoryVisibility =
+                    if (editMode && category.categoryEditExpanded) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
+
+                findInCategory<View>(
+                    category,
+                    R.id.c_c_add
+                )?.visibility = categoryVisibility
+
+                findInCategory<View>(
+                    category,
+                    R.id.c_c_remove
+                )?.visibility = categoryVisibility
+
+                findInCategory<View>(
+                    category,
+                    R.id.c_c_add_list
+                )?.visibility = categoryVisibility
+
+                // ITEM CONTROLS
+                val itemVisibility =
+                    if (editMode && category.itemEditExpanded) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
+
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_add
+                )?.visibility = itemVisibility
+
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_remove
+                )?.visibility = itemVisibility
+
+                findInCategory<View>(
+                    category,
+                    R.id.c_i_add_list
+                )?.visibility = itemVisibility
+            }
         }
     }
 
@@ -1072,13 +1479,17 @@ class Complete : AppCompatActivity() {
     private fun resetChangeFlags(group: GroupUi) {
 
         group.placeChanged = false
-        group.categoryChanged = false
-        group.itemChanged = false
 
-        group.brandChanged = false
-        group.nameChanged = false
-        group.weightChanged = false
-        group.quantityChanged = false
+        for (category in group.categories) {
+
+            category.categoryChanged = false
+            category.itemChanged = false
+
+            category.brandChanged = false
+            category.nameChanged = false
+            category.weightChanged = false
+            category.quantityChanged = false
+        }
     }
 
     // UPDATE NAME COLORS
@@ -1091,49 +1502,53 @@ class Complete : AppCompatActivity() {
 
     private fun updateNameColors(group: GroupUi) {
 
-        if (!editMode) {
-
-            group.placeName.setTextColor(white)
-            group.categoryName.setTextColor(white)
-            group.itemName.setTextColor(white)
-
-            group.brandName.setTextColor(muted)
-            group.nameName.setTextColor(muted)
-            group.weightName.setTextColor(muted)
-            group.quantityName.setTextColor(muted)
-
-            return
-        }
-
-        // PLACE / CATEGORY / ITEM
+        // PLACE
         group.placeName.setTextColor(
-            if (group.placeChanged) white else muted
+            if (!editMode || group.placeChanged) white else muted
         )
 
-        group.categoryName.setTextColor(
-            if (group.categoryChanged) white else muted
-        )
+        // EACH CATEGORY
+        for (category in group.categories) {
 
-        group.itemName.setTextColor(
-            if (group.itemChanged) white else muted
-        )
+            if (!editMode) {
 
-        // BRAND / NAME / WEIGHT / QUANTITY
-        group.brandName.setTextColor(
-            if (group.brandChanged) muted else white
-        )
+                category.categoryName.setTextColor(white)
+                category.itemName.setTextColor(white)
 
-        group.nameName.setTextColor(
-            if (group.nameChanged) muted else white
-        )
+                category.brandName.setTextColor(muted)
+                category.nameName.setTextColor(muted)
+                category.weightName.setTextColor(muted)
+                category.quantityName.setTextColor(muted)
 
-        group.weightName.setTextColor(
-            if (group.weightChanged) muted else white
-        )
+                continue
+            }
 
-        group.quantityName.setTextColor(
-            if (group.quantityChanged) muted else white
-        )
+            // CATEGORY / ITEM
+            category.categoryName.setTextColor(
+                if (category.categoryChanged) white else muted
+            )
+
+            category.itemName.setTextColor(
+                if (category.itemChanged) white else muted
+            )
+
+            // BRAND / NAME / WEIGHT / QUANTITY
+            category.brandName.setTextColor(
+                if (category.brandChanged) muted else white
+            )
+
+            category.nameName.setTextColor(
+                if (category.nameChanged) muted else white
+            )
+
+            category.weightName.setTextColor(
+                if (category.weightChanged) muted else white
+            )
+
+            category.quantityName.setTextColor(
+                if (category.quantityChanged) muted else white
+            )
+        }
     }
 
     // CHECK CHANGES
@@ -1142,32 +1557,31 @@ class Complete : AppCompatActivity() {
         return groups.any { group ->
 
             group.placeChanged ||
-                    group.categoryChanged ||
-                    group.itemChanged ||
-                    group.brandChanged ||
-                    group.nameChanged ||
-                    group.weightChanged ||
-                    group.quantityChanged
+                    group.categories.any { category ->
+
+                        category.categoryChanged ||
+                                category.itemChanged ||
+                                category.brandChanged ||
+                                category.nameChanged ||
+                                category.weightChanged ||
+                                category.quantityChanged
+                    }
         }
     }
 
     // REQUIRED NAMES AND DUPLICATE VALIDATION
     private fun allRequiredNamesFilled(): Boolean {
 
-        // Normalize text for case-insensitive comparison
+        // NORMALIZE TEXT
         fun normalize(text: CharSequence): String {
             return text.toString()
                 .trim()
                 .lowercase(Locale.ROOT)
         }
 
-        // Check required names
-        if (!groups.all { group ->
-
-                normalize(group.placeName.text).isNotEmpty() &&
-                        normalize(group.categoryName.text).isNotEmpty() &&
-                        normalize(group.itemName.text).isNotEmpty()
-
+        // PLACE NAMES CANNOT BE EMPTY
+        if (groups.any {
+                normalize(it.placeName.text).isEmpty()
             }) {
             return false
         }
@@ -1181,23 +1595,29 @@ class Complete : AppCompatActivity() {
             return false
         }
 
-        // CATEGORY NAMES MUST BE UNIQUE INSIDE EACH PLACE
+        // VALIDATE EACH PLACE
         for (group in groups) {
 
-            val categoryNames = listOf(
-                normalize(group.categoryName.text)
-            )
-
-            if (categoryNames.size != categoryNames.toSet().size) {
+            if (group.categories.isEmpty()) {
                 return false
             }
 
-            // ITEM NAMES MUST BE UNIQUE INSIDE EACH CATEGORY
-            val itemNames = listOf(
-                normalize(group.itemName.text)
-            )
+            // CATEGORY AND ITEM NAMES CANNOT BE EMPTY
+            if (group.categories.any { category ->
 
-            if (itemNames.size != itemNames.toSet().size) {
+                    normalize(category.categoryName.text).isEmpty() ||
+                            normalize(category.itemName.text).isEmpty()
+
+                }) {
+                return false
+            }
+
+            // CATEGORY NAMES MUST BE UNIQUE WITHIN THIS PLACE
+            val categoryNames = group.categories.map {
+                normalize(it.categoryName.text)
+            }
+
+            if (categoryNames.size != categoryNames.toSet().size) {
                 return false
             }
         }
