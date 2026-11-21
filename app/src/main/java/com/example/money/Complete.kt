@@ -1,3 +1,4 @@
+
 package com.example.shoppinglist
 
 import android.content.Context
@@ -5,6 +6,8 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.text.InputType
+import android.text.TextWatcher
+import android.text.Editable
 import android.util.SparseIntArray
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +15,8 @@ import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TableLayout
+import android.widget.TableRow
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
@@ -40,39 +45,60 @@ class Complete : AppCompatActivity() {
     private lateinit var scroll: LinearLayout
     private lateinit var editButton: AppCompatButton
 
-    private data class CategoryUi(
-        val root: LinearLayout,
+    private data class BrandUi(
+        val root: TableRow,
         val idMap: SparseIntArray,
-
-        val categoryName: TextView,
-        val itemName: TextView,
 
         val brandName: TextView,
         val nameName: TextView,
         val weightName: TextView,
         val quantityName: TextView,
 
-        var categoryExpanded: Boolean = false,
-        var itemExpanded: Boolean = false,
-
-        var categoryEditExpanded: Boolean = false,
-        var itemEditExpanded: Boolean = false,
-
-        var savedCategoryName: String = "",
-        var savedItemName: String = "",
-
         var savedBrandName: String = "",
         var savedNameName: String = "",
         var savedWeightName: String = "",
         var savedQuantityName: String = "",
 
-        var categoryChanged: Boolean = false,
-        var itemChanged: Boolean = false,
-
         var brandChanged: Boolean = false,
         var nameChanged: Boolean = false,
         var weightChanged: Boolean = false,
         var quantityChanged: Boolean = false
+    )
+
+    // NEW CODE //
+    private data class ItemUi(
+        val root: LinearLayout,
+        val idMap: SparseIntArray,
+
+        val itemName: TextView,
+        val brandContainer: TableLayout,
+
+        var itemExpanded: Boolean = false,
+        var itemEditExpanded: Boolean = false,
+
+        var savedItemName: String = "",
+        var itemChanged: Boolean = false,
+
+        val brands: MutableList<BrandUi> = mutableListOf()
+    )
+    // NEW CODE //
+
+    private data class CategoryUi(
+        val root: LinearLayout,
+        val idMap: SparseIntArray,
+
+        val categoryName: TextView,
+        val itemContainer: LinearLayout,
+
+        var categoryExpanded: Boolean = false,
+        var categoryEditExpanded: Boolean = false,
+
+        var savedCategoryName: String = "",
+        var categoryChanged: Boolean = false,
+
+        // NEW CODE //
+        val items: MutableList<ItemUi> = mutableListOf()
+        // NEW CODE //
     )
 
     private data class GroupUi(
@@ -146,27 +172,10 @@ class Complete : AppCompatActivity() {
 
         groups.add(originalGroup)
 
-        // LOAD ORIGINAL GROUP DATA
         loadGroupData(originalGroup, 0)
 
-        // LOAD ORIGINAL EXPANSION STATE
         originalGroup.placeExpanded =
             statePreferences.getBoolean("place_expanded", false)
-
-        for ((index, category) in originalGroup.categories.withIndex()) {
-
-            category.categoryExpanded = statePreferences.getBoolean(
-                if (index == 0) "category_expanded"
-                else "category_${index}_expanded",
-                false
-            )
-
-            category.itemExpanded = statePreferences.getBoolean(
-                if (index == 0) "item_expanded"
-                else "category_${index}_item_expanded",
-                false
-            )
-        }
 
         // RESTORE DUPLICATED PLACES
         val savedGroupCount = dataPreferences.getInt(
@@ -197,8 +206,12 @@ class Complete : AppCompatActivity() {
                     group.placeEditExpanded = false
 
                     for (category in group.categories) {
+
                         category.categoryEditExpanded = false
-                        category.itemEditExpanded = false
+
+                        for (item in category.items) {
+                            item.itemEditExpanded = false
+                        }
                     }
                 }
 
@@ -213,7 +226,6 @@ class Complete : AppCompatActivity() {
                     updateSavedNames()
                 }
 
-                // HIDE KEYBOARD
                 val imm = getSystemService(
                     Context.INPUT_METHOD_SERVICE
                 ) as InputMethodManager
@@ -236,8 +248,12 @@ class Complete : AppCompatActivity() {
                     group.placeEditExpanded = false
 
                     for (category in group.categories) {
+
                         category.categoryEditExpanded = false
-                        category.itemEditExpanded = false
+
+                        for (item in category.items) {
+                            item.itemEditExpanded = false
+                        }
                     }
                 }
 
@@ -247,7 +263,6 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        // INITIAL STATE
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
@@ -269,14 +284,12 @@ class Complete : AppCompatActivity() {
             categoryContainer = root
         )
 
-        // PLACEHOLDER
         if (group.placeName.text.toString() == "[Place]") {
             group.placeName.text = ""
         }
 
         group.placeName.hint = "[Place]"
 
-        // FIND CATEGORY AND ITEM SECTIONS
         val categorySection = findInGroup<LinearLayout>(
             root,
             idMap,
@@ -289,11 +302,22 @@ class Complete : AppCompatActivity() {
             R.id.item_section
         )!!
 
-        // DETACH BOTH SECTIONS
         (categorySection.parent as? ViewGroup)?.removeView(categorySection)
         (itemSection.parent as? ViewGroup)?.removeView(itemSection)
 
-        // CREATE THE FIRST CATEGORY CONTAINER
+        // NEW CODE //
+        val itemContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        itemContainer.addView(itemSection)
+        // NEW CODE //
+
         val categoryRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
 
@@ -304,22 +328,21 @@ class Complete : AppCompatActivity() {
         }
 
         categoryRoot.addView(categorySection)
-        categoryRoot.addView(itemSection)
+        categoryRoot.addView(itemContainer)
 
-        // ADD CATEGORY CONTAINER TO PLACE
         root.addView(categoryRoot)
 
-        // SET UP FIRST CATEGORY
-        // REUSE THE PLACE ID MAP
         val firstCategory = setupCategory(
             group = group,
             root = categoryRoot,
+            categorySection = categorySection,
+            itemContainer = itemContainer,
+            firstItemSection = itemSection,
             idMap = idMap
         )
 
         group.categories.add(firstCategory)
 
-        // PLACE DROPDOWN
         findInGroup<View>(
             group,
             R.id.a_p_expand
@@ -331,7 +354,6 @@ class Complete : AppCompatActivity() {
             updateGroupExpansion(group)
         }
 
-        // PLACE EDIT BUTTON
         findInGroup<View>(
             group,
             R.id.c_p_edit
@@ -339,12 +361,10 @@ class Complete : AppCompatActivity() {
 
             if (editMode) {
                 group.placeEditExpanded = !group.placeEditExpanded
-
                 updateEditVisibility()
             }
         }
 
-        // PLACE NAME
         group.placeName.setOnClickListener {
 
             if (editMode) {
@@ -362,7 +382,6 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        // ADD PLACE
         findInGroup<View>(
             group,
             R.id.c_p_add
@@ -377,6 +396,9 @@ class Complete : AppCompatActivity() {
     private fun setupCategory(
         group: GroupUi,
         root: LinearLayout,
+        categorySection: LinearLayout,
+        itemContainer: LinearLayout,
+        firstItemSection: LinearLayout,
         idMap: SparseIntArray
     ): CategoryUi {
 
@@ -384,36 +406,34 @@ class Complete : AppCompatActivity() {
             root = root,
             idMap = idMap,
 
-            categoryName = findInCategory(root, idMap, R.id.a_c_name)!!,
-            itemName = findInCategory(root, idMap, R.id.a_i_name)!!,
+            categoryName = findInCategory(
+                categorySection,
+                idMap,
+                R.id.a_c_name
+            )!!,
 
-            brandName = findInCategory(root, idMap, R.id.a_b_brand)!!,
-            nameName = findInCategory(root, idMap, R.id.a_b_name)!!,
-            weightName = findInCategory(root, idMap, R.id.a_b_weight)!!,
-            quantityName = findInCategory(root, idMap, R.id.a_b_quantity)!!
+            itemContainer = itemContainer
         )
 
-        // PLACEHOLDERS
-        val placeholders = listOf(
-            category.categoryName to "[Category]",
-            category.itemName to "[Item]",
-            category.brandName to "[Brand]",
-            category.nameName to "[Name]",
-            category.weightName to "[Weight]",
-            category.quantityName to "[Quantity]"
-        )
-
-        for ((textView, placeholder) in placeholders) {
-
-            if (textView.text.toString() == placeholder) {
-                textView.text = ""
-            }
-
-            textView.hint = placeholder
+        if (category.categoryName.text.toString() == "[Category]") {
+            category.categoryName.text = ""
         }
 
-        // CATEGORY DROPDOWN
-        findInCategory<View>(category, R.id.a_c_expand)?.setOnClickListener {
+        category.categoryName.hint = "[Category]"
+
+        // NEW CODE //
+        val firstItem = setupItem(
+            root = firstItemSection,
+            idMap = idMap
+        )
+
+        category.items.add(firstItem)
+        // NEW CODE //
+
+        findInCategory<View>(
+            category,
+            R.id.a_c_expand
+        )?.setOnClickListener {
 
             category.categoryExpanded = !category.categoryExpanded
 
@@ -421,17 +441,10 @@ class Complete : AppCompatActivity() {
             updateGroupExpansion(group)
         }
 
-        // ITEM DROPDOWN
-        findInCategory<View>(category, R.id.a_i_expand)?.setOnClickListener {
-
-            category.itemExpanded = !category.itemExpanded
-
-            saveExpansionState(group)
-            updateGroupExpansion(group)
-        }
-
-        // CATEGORY EDIT BUTTON
-        findInCategory<View>(category, R.id.c_c_edit)?.setOnClickListener {
+        findInCategory<View>(
+            category,
+            R.id.c_c_edit
+        )?.setOnClickListener {
 
             if (editMode) {
                 category.categoryEditExpanded =
@@ -441,18 +454,6 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        // ITEM EDIT BUTTON
-        findInCategory<View>(category, R.id.c_i_edit)?.setOnClickListener {
-
-            if (editMode) {
-                category.itemEditExpanded =
-                    !category.itemEditExpanded
-
-                updateEditVisibility()
-            }
-        }
-
-        // CATEGORY NAME
         category.categoryName.setOnClickListener {
 
             if (editMode) {
@@ -470,103 +471,243 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        // ITEM NAME
-        category.itemName.setOnClickListener {
-
-            if (editMode) {
-                editName(
-                    category.itemName,
-                    "[Item]",
-                    category.savedItemName
-                ) { changed ->
-
-                    category.itemChanged = changed
-
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // BRAND HEADER
-        category.brandName.setOnClickListener {
-
-            if (editMode) {
-                editName(
-                    category.brandName,
-                    "[Brand]",
-                    category.savedBrandName
-                ) { changed ->
-
-                    category.brandChanged = changed
-
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // NAME HEADER
-        category.nameName.setOnClickListener {
-
-            if (editMode) {
-                editName(
-                    category.nameName,
-                    "[Name]",
-                    category.savedNameName
-                ) { changed ->
-
-                    category.nameChanged = changed
-
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // WEIGHT HEADER
-        category.weightName.setOnClickListener {
-
-            if (editMode) {
-                editName(
-                    category.weightName,
-                    "[Weight]",
-                    category.savedWeightName
-                ) { changed ->
-
-                    category.weightChanged = changed
-
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // QUANTITY HEADER
-        category.quantityName.setOnClickListener {
-
-            if (editMode) {
-                editName(
-                    category.quantityName,
-                    "[Quantity]",
-                    category.savedQuantityName
-                ) { changed ->
-
-                    category.quantityChanged = changed
-
-                    updateAllNameColors()
-                    updateSaveButton()
-                }
-            }
-        }
-
-        // ADD CATEGORY
-        findInCategory<View>(category, R.id.c_c_add)?.setOnClickListener {
+        findInCategory<View>(
+            category,
+            R.id.c_c_add
+        )?.setOnClickListener {
             addCategory(group, category)
         }
 
         return category
     }
+
+    // NEW CODE //
+    // SETUP ITEM
+    private fun setupItem(
+        root: LinearLayout,
+        idMap: SparseIntArray
+    ): ItemUi {
+
+        val item = ItemUi(
+            root = root,
+            idMap = idMap,
+
+            itemName = findInItem(
+                root,
+                idMap,
+                R.id.a_i_name
+            )!!,
+
+            brandContainer = findInItem(
+                root,
+                idMap,
+                R.id.item_brand_bar
+            )!!
+        )
+
+        if (item.itemName.text.toString() == "[Item]") {
+            item.itemName.text = ""
+        }
+
+        item.itemName.hint = "[Item]"
+
+        val firstRow = item.brandContainer.getChildAt(0) as TableRow
+
+        val firstBrand = setupBrand(
+            root = firstRow,
+            idMap = idMap
+        )
+
+        item.brands.add(firstBrand)
+
+        findInItem<View>(
+            item,
+            R.id.a_i_expand
+        )?.setOnClickListener {
+
+            item.itemExpanded = !item.itemExpanded
+
+            val group = groups.firstOrNull { group ->
+                group.categories.any { category ->
+                    category.items.contains(item)
+                }
+            }
+
+            if (group != null) {
+                saveExpansionState(group)
+                updateGroupExpansion(group)
+            }
+        }
+
+        findInItem<View>(
+            item,
+            R.id.c_i_edit
+        )?.setOnClickListener {
+
+            if (editMode) {
+                item.itemEditExpanded = !item.itemEditExpanded
+                updateEditVisibility()
+            }
+        }
+
+        item.itemName.setOnClickListener {
+
+            if (editMode) {
+                editName(
+                    item.itemName,
+                    "[Item]",
+                    item.savedItemName
+                ) { changed ->
+
+                    item.itemChanged = changed
+
+                    updateAllNameColors()
+                    updateSaveButton()
+                }
+            }
+        }
+
+        // ADD ITEM
+        findInItem<View>(
+            item,
+            R.id.c_i_add
+        )?.setOnClickListener {
+
+            val category = groups
+                .flatMap { it.categories }
+                .firstOrNull { it.items.contains(item) }
+
+            if (category != null) {
+                addItem(category, item)
+            }
+        }
+
+        return item
+    }
+
+    // SETUP BRAND ROW
+    private fun setupBrand(
+        root: TableRow,
+        idMap: SparseIntArray
+    ): BrandUi {
+
+        val brand = BrandUi(
+            root = root,
+            idMap = idMap,
+
+            brandName = findInBrand(root, idMap, R.id.a_b_brand)!!,
+            nameName = findInBrand(root, idMap, R.id.a_b_name)!!,
+            weightName = findInBrand(root, idMap, R.id.a_b_weight)!!,
+            quantityName = findInBrand(root, idMap, R.id.a_b_quantity)!!
+        )
+
+        val placeholders = listOf(
+            brand.brandName to "[Brand]",
+            brand.nameName to "[Name]",
+            brand.weightName to "[Weight]",
+            brand.quantityName to "[Quantity]"
+        )
+
+        for ((textView, placeholder) in placeholders) {
+
+            if (textView.text.toString() == placeholder) {
+                textView.text = ""
+            }
+
+            textView.hint = placeholder
+        }
+
+        brand.brandName.setOnClickListener {
+            if (editMode) {
+                editBrandField(
+                    brand,
+                    brand.brandName,
+                    "[Brand]",
+                    brand.savedBrandName,
+                    0
+                )
+            }
+        }
+
+        brand.nameName.setOnClickListener {
+            if (editMode) {
+                editBrandField(
+                    brand,
+                    brand.nameName,
+                    "[Name]",
+                    brand.savedNameName,
+                    1
+                )
+            }
+        }
+
+        brand.weightName.setOnClickListener {
+            if (editMode) {
+                editBrandField(
+                    brand,
+                    brand.weightName,
+                    "[Weight]",
+                    brand.savedWeightName,
+                    2
+                )
+            }
+        }
+
+        brand.quantityName.setOnClickListener {
+            if (editMode) {
+                editBrandField(
+                    brand,
+                    brand.quantityName,
+                    "[Quantity]",
+                    brand.savedQuantityName,
+                    3
+                )
+            }
+        }
+
+        // ADD BRAND ROW
+        findInBrand<View>(
+            root,
+            idMap,
+            R.id.c_i_b_add
+        )?.setOnClickListener {
+
+            val item = groups
+                .flatMap { it.categories }
+                .flatMap { it.items }
+                .firstOrNull { it.brands.contains(brand) }
+
+            if (item != null) {
+                addBrand(item, brand)
+            }
+        }
+
+        return brand
+    }
+
+    // EDIT BRAND FIELD
+    private fun editBrandField(
+        brand: BrandUi,
+        textView: TextView,
+        hint: String,
+        savedName: String,
+        field: Int
+    ) {
+
+        editName(textView, hint, savedName) { changed ->
+
+            when (field) {
+                0 -> brand.brandChanged = changed
+                1 -> brand.nameChanged = changed
+                2 -> brand.weightChanged = changed
+                3 -> brand.quantityChanged = changed
+            }
+
+            updateAllNameColors()
+            updateSaveButton()
+        }
+    }
+    // NEW CODE //
 
     // ADD DUPLICATED CATEGORY
     private fun addCategory(
@@ -574,7 +715,6 @@ class Complete : AppCompatActivity() {
         afterCategory: CategoryUi
     ) {
 
-        // INFLATE A FRESH LAYOUT
         val tempRoot = layoutInflater.inflate(
             R.layout.complete,
             null,
@@ -593,11 +733,20 @@ class Complete : AppCompatActivity() {
             R.id.item_section
         )
 
-        // DETACH BOTH SECTIONS
         (categorySection.parent as? ViewGroup)?.removeView(categorySection)
         (itemSection.parent as? ViewGroup)?.removeView(itemSection)
 
-        // CREATE CATEGORY ROOT
+        val itemContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        itemContainer.addView(itemSection)
+
         val categoryRoot = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
 
@@ -608,44 +757,35 @@ class Complete : AppCompatActivity() {
         }
 
         categoryRoot.addView(categorySection)
-        categoryRoot.addView(itemSection)
+        categoryRoot.addView(itemContainer)
 
-        // REMOVE THE EXTRA CATEGORY SORT BAR
-        categoryRoot.findViewById<View>(
+        categorySection.findViewById<View>(
             R.id.edit_category_bar
         )?.let {
             (it.parent as? ViewGroup)?.removeView(it)
         }
 
-        // GENERATE UNIQUE IDS
         val idMap = SparseIntArray()
         regenerateViewIds(categoryRoot, idMap)
 
-        // SETUP NEW CATEGORY
         val newCategory = setupCategory(
             group = group,
             root = categoryRoot,
+            categorySection = categorySection,
+            itemContainer = itemContainer,
+            firstItemSection = itemSection,
             idMap = idMap
         )
 
-        // CLEAR NEW CATEGORY VALUES
         newCategory.categoryName.text = ""
-        newCategory.itemName.text = ""
-
-        newCategory.brandName.text = ""
-        newCategory.nameName.text = ""
-        newCategory.weightName.text = ""
-        newCategory.quantityName.text = ""
-
         newCategory.savedCategoryName = ""
-        newCategory.savedItemName = ""
 
-        newCategory.savedBrandName = ""
-        newCategory.savedNameName = ""
-        newCategory.savedWeightName = ""
-        newCategory.savedQuantityName = ""
+        // NEW CODE //
+        for (item in newCategory.items) {
+            clearItem(item)
+        }
+        // NEW CODE //
 
-        // INSERT AFTER THE SELECTED CATEGORY
         val categoryIndex = group.categories.indexOf(afterCategory) + 1
         val viewIndex = group.categoryContainer.indexOfChild(afterCategory.root) + 1
 
@@ -661,6 +801,140 @@ class Complete : AppCompatActivity() {
         updateAllNameColors()
         updateSaveButton()
     }
+
+    // NEW CODE //
+    // ADD DUPLICATED ITEM
+    private fun addItem(
+        category: CategoryUi,
+        afterItem: ItemUi
+    ) {
+
+        val tempRoot = layoutInflater.inflate(
+            R.layout.complete,
+            null,
+            false
+        ) as ViewGroup
+
+        val tempGroup = tempRoot.findViewById<LinearLayout>(
+            R.id.group
+        )
+
+        val itemSection = tempGroup.findViewById<LinearLayout>(
+            R.id.item_section
+        )
+
+        (itemSection.parent as? ViewGroup)?.removeView(itemSection)
+
+        val idMap = SparseIntArray()
+        regenerateViewIds(itemSection, idMap)
+
+        val newItem = setupItem(
+            root = itemSection,
+            idMap = idMap
+        )
+
+        clearItem(newItem)
+
+        val itemIndex = category.items.indexOf(afterItem) + 1
+        val viewIndex = category.itemContainer.indexOfChild(afterItem.root) + 1
+
+        category.items.add(itemIndex, newItem)
+
+        category.itemContainer.addView(
+            itemSection,
+            viewIndex
+        )
+
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
+    }
+
+    // ADD DUPLICATED BRAND ROW
+    private fun addBrand(
+        item: ItemUi,
+        afterBrand: BrandUi
+    ) {
+
+        val tempRoot = layoutInflater.inflate(
+            R.layout.complete,
+            null,
+            false
+        ) as ViewGroup
+
+        val tempGroup = tempRoot.findViewById<LinearLayout>(
+            R.id.group
+        )
+
+        val tempItemSection = tempGroup.findViewById<LinearLayout>(
+            R.id.item_section
+        )
+
+        val tempBrandContainer = tempItemSection.findViewById<TableLayout>(
+            R.id.item_brand_bar
+        )
+
+        val brandRow = tempBrandContainer.getChildAt(0) as TableRow
+
+        (brandRow.parent as? ViewGroup)?.removeView(brandRow)
+
+        val idMap = SparseIntArray()
+        regenerateViewIds(brandRow, idMap)
+
+        val newBrand = setupBrand(
+            root = brandRow,
+            idMap = idMap
+        )
+
+        clearBrand(newBrand)
+
+        val brandIndex = item.brands.indexOf(afterBrand) + 1
+        val viewIndex = item.brandContainer.indexOfChild(afterBrand.root) + 1
+
+        item.brands.add(brandIndex, newBrand)
+
+        item.brandContainer.addView(
+            brandRow,
+            viewIndex
+        )
+
+        updateEditVisibility()
+        updateAllNameColors()
+        updateSaveButton()
+    }
+
+    private fun clearItem(item: ItemUi) {
+
+        item.itemName.text = ""
+        item.savedItemName = ""
+        item.itemChanged = false
+        item.itemExpanded = false
+        item.itemEditExpanded = false
+
+        for (brand in item.brands) {
+            clearBrand(brand)
+        }
+    }
+
+    private fun clearBrand(brand: BrandUi) {
+
+        brand.brandName.text = ""
+        brand.nameName.text = ""
+        brand.weightName.text = ""
+        brand.quantityName.text = ""
+
+        brand.savedBrandName = ""
+        brand.savedNameName = ""
+        brand.savedWeightName = ""
+        brand.savedQuantityName = ""
+
+        brand.brandChanged = false
+        brand.nameChanged = false
+        brand.weightChanged = false
+        brand.quantityChanged = false
+    }
+    // NEW CODE //
 
     // ADD DUPLICATED PLACE
     private fun addGroup(
@@ -679,25 +953,21 @@ class Complete : AppCompatActivity() {
             R.id.group
         )
 
-        // REMOVE DUPLICATE PLACE EDIT BAR
         newGroup.findViewById<View>(
             R.id.edit_place_bar
         )?.let {
             (it.parent as? ViewGroup)?.removeView(it)
         }
 
-        // GENERATE UNIQUE IDS
         val idMap = SparseIntArray()
         regenerateViewIds(newGroup, idMap)
 
-        // SETUP DUPLICATE PLACE
         val newGroupUi = setupGroup(
             root = newGroup,
             idMap = idMap,
             isOriginal = false
         )
 
-        // INSERT AFTER SELECTED PLACE
         val insertIndex = if (afterGroup != null) {
             groups.indexOf(afterGroup) + 1
         } else {
@@ -706,7 +976,6 @@ class Complete : AppCompatActivity() {
 
         groups.add(insertIndex, newGroupUi)
 
-        // LOAD SAVED DATA OR INITIALIZE NEW PLACE
         if (restoreIndex != null) {
 
             loadGroupData(newGroupUi, restoreIndex)
@@ -719,29 +988,18 @@ class Complete : AppCompatActivity() {
             for (category in newGroupUi.categories) {
 
                 category.categoryName.text = ""
-                category.itemName.text = ""
-
-                category.brandName.text = ""
-                category.nameName.text = ""
-                category.weightName.text = ""
-                category.quantityName.text = ""
-
                 category.savedCategoryName = ""
-                category.savedItemName = ""
 
-                category.savedBrandName = ""
-                category.savedNameName = ""
-                category.savedWeightName = ""
-                category.savedQuantityName = ""
+                for (item in category.items) {
+                    clearItem(item)
+                }
 
                 category.categoryExpanded = false
-                category.itemExpanded = false
             }
 
             newGroupUi.placeExpanded = false
         }
 
-        // ADD WITH 20DP SPACING
         val params = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
@@ -749,10 +1007,8 @@ class Complete : AppCompatActivity() {
 
         params.topMargin = dp(20)
 
-        // REMOVE FROM ORIGINAL INFLATED PARENT
-        (newGroup.parent as? android.view.ViewGroup)?.removeView(newGroup)
+        (newGroup.parent as? ViewGroup)?.removeView(newGroup)
 
-        // ADD TO SCROLL CONTAINER
         scroll.addView(newGroup, insertIndex, params)
 
         updateDropdownSymbols(newGroupUi)
@@ -776,7 +1032,6 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        // LOAD PLACE
         group.placeName.text = dataPreferences.getString(
             key("place_name"),
             ""
@@ -784,22 +1039,15 @@ class Complete : AppCompatActivity() {
 
         group.savedPlaceName = group.placeName.text.toString()
 
-        // LOAD CATEGORY COUNT
         val categoryCount = dataPreferences.getInt(
             key("category_count"),
             1
         )
 
-        // CREATE ADDITIONAL CATEGORIES
         while (group.categories.size < categoryCount) {
-
-            addCategory(
-                group,
-                group.categories.last()
-            )
+            addCategory(group, group.categories.last())
         }
 
-        // LOAD EACH CATEGORY
         for ((categoryIndex, category) in group.categories.withIndex()) {
 
             fun categoryKey(name: String): String {
@@ -815,65 +1063,107 @@ class Complete : AppCompatActivity() {
                 ""
             ) ?: ""
 
-            category.itemName.text = dataPreferences.getString(
-                categoryKey("item_name"),
-                ""
-            ) ?: ""
-
-            category.brandName.text = dataPreferences.getString(
-                categoryKey("brand_name"),
-                ""
-            ) ?: ""
-
-            category.nameName.text = dataPreferences.getString(
-                categoryKey("name_name"),
-                ""
-            ) ?: ""
-
-            category.weightName.text = dataPreferences.getString(
-                categoryKey("weight_name"),
-                ""
-            ) ?: ""
-
-            category.quantityName.text = dataPreferences.getString(
-                categoryKey("quantity_name"),
-                ""
-            ) ?: ""
-
-            // UPDATE SAVED VALUES
             category.savedCategoryName = category.categoryName.text.toString()
-            category.savedItemName = category.itemName.text.toString()
 
-            category.savedBrandName = category.brandName.text.toString()
-            category.savedNameName = category.nameName.text.toString()
-            category.savedWeightName = category.weightName.text.toString()
-            category.savedQuantityName = category.quantityName.text.toString()
+            val itemCount = dataPreferences.getInt(
+                categoryKey("item_count"),
+                1
+            )
 
-            // CATEGORY EXPANSION KEYS
+            // NEW CODE //
+            while (category.items.size < itemCount) {
+                addItem(category, category.items.last())
+            }
+
+            for ((itemIndex, item) in category.items.withIndex()) {
+
+                fun itemKey(name: String): String {
+                    return if (itemIndex == 0) {
+                        categoryKey(name)
+                    } else {
+                        categoryKey("item_${itemIndex}_$name")
+                    }
+                }
+
+                item.itemName.text = dataPreferences.getString(
+                    itemKey("item_name"),
+                    ""
+                ) ?: ""
+
+                item.savedItemName = item.itemName.text.toString()
+
+                val brandCount = dataPreferences.getInt(
+                    itemKey("brand_count"),
+                    1
+                )
+
+                while (item.brands.size < brandCount) {
+                    addBrand(item, item.brands.last())
+                }
+
+                for ((brandIndex, brand) in item.brands.withIndex()) {
+
+                    fun brandKey(name: String): String {
+                        return if (itemIndex == 0 && brandIndex == 0) {
+                            categoryKey(name)
+                        } else {
+                            itemKey("brand_${brandIndex}_$name")
+                        }
+                    }
+
+                    brand.brandName.text = dataPreferences.getString(
+                        brandKey("brand_name"),
+                        ""
+                    ) ?: ""
+
+                    brand.nameName.text = dataPreferences.getString(
+                        brandKey("name_name"),
+                        ""
+                    ) ?: ""
+
+                    brand.weightName.text = dataPreferences.getString(
+                        brandKey("weight_name"),
+                        ""
+                    ) ?: ""
+
+                    brand.quantityName.text = dataPreferences.getString(
+                        brandKey("quantity_name"),
+                        ""
+                    ) ?: ""
+
+                    brand.savedBrandName = brand.brandName.text.toString()
+                    brand.savedNameName = brand.nameName.text.toString()
+                    brand.savedWeightName = brand.weightName.text.toString()
+                    brand.savedQuantityName = brand.quantityName.text.toString()
+                }
+
+                item.itemExpanded = statePreferences.getBoolean(
+                    itemKey("item_expanded"),
+                    if (itemIndex == 0) {
+                        statePreferences.getBoolean(
+                            if (categoryIndex == 0) key("item_expanded")
+                            else key("category_${categoryIndex}_item_expanded"),
+                            false
+                        )
+                    } else {
+                        false
+                    }
+                )
+            }
+            // NEW CODE //
+
             val categoryExpandedKey = if (categoryIndex == 0) {
                 key("category_expanded")
             } else {
                 key("category_${categoryIndex}_expanded")
             }
 
-            val itemExpandedKey = if (categoryIndex == 0) {
-                key("item_expanded")
-            } else {
-                key("category_${categoryIndex}_item_expanded")
-            }
-
             category.categoryExpanded = statePreferences.getBoolean(
                 categoryExpandedKey,
                 false
             )
-
-            category.itemExpanded = statePreferences.getBoolean(
-                itemExpandedKey,
-                false
-            )
         }
 
-        // LOAD PLACE EXPANSION
         group.placeExpanded = statePreferences.getBoolean(
             key("place_expanded"),
             false
@@ -898,25 +1188,21 @@ class Complete : AppCompatActivity() {
                 }
             }
 
-            // SAVE PLACE
             dataEditor.putString(
                 key("place_name"),
                 group.placeName.text.toString()
             )
 
-            // SAVE CATEGORY COUNT
             dataEditor.putInt(
                 key("category_count"),
                 group.categories.size
             )
 
-            // SAVE PLACE EXPANSION
             stateEditor.putBoolean(
                 key("place_expanded"),
                 group.placeExpanded
             )
 
-            // SAVE CATEGORIES
             for ((categoryIndex, category) in group.categories.withIndex()) {
 
                 fun categoryKey(name: String): String {
@@ -932,52 +1218,75 @@ class Complete : AppCompatActivity() {
                     category.categoryName.text.toString()
                 )
 
-                dataEditor.putString(
-                    categoryKey("item_name"),
-                    category.itemName.text.toString()
-                )
-
-                dataEditor.putString(
-                    categoryKey("brand_name"),
-                    category.brandName.text.toString()
-                )
-
-                dataEditor.putString(
-                    categoryKey("name_name"),
-                    category.nameName.text.toString()
-                )
-
-                dataEditor.putString(
-                    categoryKey("weight_name"),
-                    category.weightName.text.toString()
-                )
-
-                dataEditor.putString(
-                    categoryKey("quantity_name"),
-                    category.quantityName.text.toString()
-                )
-
                 stateEditor.putBoolean(
-                    key(
-                        if (categoryIndex == 0) {
-                            "category_expanded"
-                        } else {
-                            "category_${categoryIndex}_expanded"
-                        }
-                    ),
+                    if (categoryIndex == 0) key("category_expanded")
+                    else key("category_${categoryIndex}_expanded"),
                     category.categoryExpanded
                 )
 
-                stateEditor.putBoolean(
-                    key(
-                        if (categoryIndex == 0) {
-                            "item_expanded"
-                        } else {
-                            "category_${categoryIndex}_item_expanded"
-                        }
-                    ),
-                    category.itemExpanded
+                // NEW CODE //
+                dataEditor.putInt(
+                    categoryKey("item_count"),
+                    category.items.size
                 )
+
+                for ((itemIndex, item) in category.items.withIndex()) {
+
+                    fun itemKey(name: String): String {
+                        return if (itemIndex == 0) {
+                            categoryKey(name)
+                        } else {
+                            categoryKey("item_${itemIndex}_$name")
+                        }
+                    }
+
+                    dataEditor.putString(
+                        itemKey("item_name"),
+                        item.itemName.text.toString()
+                    )
+
+                    dataEditor.putInt(
+                        itemKey("brand_count"),
+                        item.brands.size
+                    )
+
+                    stateEditor.putBoolean(
+                        itemKey("item_expanded"),
+                        item.itemExpanded
+                    )
+
+                    for ((brandIndex, brand) in item.brands.withIndex()) {
+
+                        fun brandKey(name: String): String {
+                            return if (itemIndex == 0 && brandIndex == 0) {
+                                categoryKey(name)
+                            } else {
+                                itemKey("brand_${brandIndex}_$name")
+                            }
+                        }
+
+                        dataEditor.putString(
+                            brandKey("brand_name"),
+                            brand.brandName.text.toString()
+                        )
+
+                        dataEditor.putString(
+                            brandKey("name_name"),
+                            brand.nameName.text.toString()
+                        )
+
+                        dataEditor.putString(
+                            brandKey("weight_name"),
+                            brand.weightName.text.toString()
+                        )
+
+                        dataEditor.putString(
+                            brandKey("quantity_name"),
+                            brand.quantityName.text.toString()
+                        )
+                    }
+                }
+                // NEW CODE //
             }
         }
 
@@ -997,20 +1306,20 @@ class Complete : AppCompatActivity() {
                 category.savedCategoryName =
                     category.categoryName.text.toString()
 
-                category.savedItemName =
-                    category.itemName.text.toString()
+                // NEW CODE //
+                for (item in category.items) {
 
-                category.savedBrandName =
-                    category.brandName.text.toString()
+                    item.savedItemName = item.itemName.text.toString()
 
-                category.savedNameName =
-                    category.nameName.text.toString()
+                    for (brand in item.brands) {
 
-                category.savedWeightName =
-                    category.weightName.text.toString()
-
-                category.savedQuantityName =
-                    category.quantityName.text.toString()
+                        brand.savedBrandName = brand.brandName.text.toString()
+                        brand.savedNameName = brand.nameName.text.toString()
+                        brand.savedWeightName = brand.weightName.text.toString()
+                        brand.savedQuantityName = brand.quantityName.text.toString()
+                    }
+                }
+                // NEW CODE //
             }
         }
     }
@@ -1037,27 +1346,28 @@ class Complete : AppCompatActivity() {
 
         for ((categoryIndex, category) in group.categories.withIndex()) {
 
-            val categoryExpandedKey = if (categoryIndex == 0) {
-                key("category_expanded")
-            } else {
-                key("category_${categoryIndex}_expanded")
-            }
-
-            val itemExpandedKey = if (categoryIndex == 0) {
-                key("item_expanded")
-            } else {
-                key("category_${categoryIndex}_item_expanded")
-            }
-
             editor.putBoolean(
-                categoryExpandedKey,
+                if (categoryIndex == 0) key("category_expanded")
+                else key("category_${categoryIndex}_expanded"),
                 category.categoryExpanded
             )
 
-            editor.putBoolean(
-                itemExpandedKey,
-                category.itemExpanded
-            )
+            // NEW CODE //
+            for ((itemIndex, item) in category.items.withIndex()) {
+
+                val itemKey = if (itemIndex == 0) {
+                    if (categoryIndex == 0) key("item_expanded")
+                    else key("category_${categoryIndex}_item_expanded")
+                } else {
+                    key("category_${categoryIndex}_item_${itemIndex}_item_expanded")
+                }
+
+                editor.putBoolean(
+                    itemKey,
+                    item.itemExpanded
+                )
+            }
+            // NEW CODE //
         }
 
         editor.apply()
@@ -1104,7 +1414,6 @@ class Complete : AppCompatActivity() {
         return group.root.findViewById(actualId)
     }
 
-    // FIND VIEW BEFORE GROUP SETUP
     private fun <T : View> findInGroup(
         root: View,
         idMap: SparseIntArray,
@@ -1119,7 +1428,6 @@ class Complete : AppCompatActivity() {
         return root.findViewById(actualId)
     }
 
-    // FIND VIEW IN CATEGORY
     private fun <T : View> findInCategory(
         category: CategoryUi,
         originalId: Int
@@ -1133,7 +1441,6 @@ class Complete : AppCompatActivity() {
         return category.root.findViewById(actualId)
     }
 
-    // FIND VIEW IN CATEGORY ROOT
     private fun <T : View> findInCategory(
         root: View,
         idMap: SparseIntArray,
@@ -1147,6 +1454,49 @@ class Complete : AppCompatActivity() {
 
         return root.findViewById(actualId)
     }
+
+    // NEW CODE //
+    private fun <T : View> findInItem(
+        item: ItemUi,
+        originalId: Int
+    ): T? {
+
+        val actualId = item.idMap.get(
+            originalId,
+            originalId
+        )
+
+        return item.root.findViewById(actualId)
+    }
+
+    private fun <T : View> findInItem(
+        root: View,
+        idMap: SparseIntArray,
+        originalId: Int
+    ): T? {
+
+        val actualId = idMap.get(
+            originalId,
+            originalId
+        )
+
+        return root.findViewById(actualId)
+    }
+
+    private fun <T : View> findInBrand(
+        root: View,
+        idMap: SparseIntArray,
+        originalId: Int
+    ): T? {
+
+        val actualId = idMap.get(
+            originalId,
+            originalId
+        )
+
+        return root.findViewById(actualId)
+    }
+    // NEW CODE //
 
     // UPDATE DROPDOWN SYMBOLS
     private fun updateDropdownSymbols(group: GroupUi) {
@@ -1177,17 +1527,22 @@ class Complete : AppCompatActivity() {
                 includeFontPadding = false
             }
 
-            findInCategory<TextView>(
-                category,
-                R.id.a_i_expand
-            )?.apply {
+            // NEW CODE //
+            for (item in category.items) {
 
-                text = if (category.itemExpanded) "v" else ">"
+                findInItem<TextView>(
+                    item,
+                    R.id.a_i_expand
+                )?.apply {
 
-                textSize = 20f
-                gravity = Gravity.CENTER
-                includeFontPadding = false
+                    text = if (item.itemExpanded) "v" else ">"
+
+                    textSize = 20f
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                }
             }
+            // NEW CODE //
         }
     }
 
@@ -1196,41 +1551,39 @@ class Complete : AppCompatActivity() {
 
         for (category in group.categories) {
 
-            // CATEGORY AND ITEM CONTAINER
             category.root.visibility =
                 if (group.placeExpanded) View.VISIBLE else View.GONE
 
-            // ITEM SECTION
-            findInCategory<View>(
-                category,
-                R.id.item_section
-            )?.visibility =
-                if (group.placeExpanded && category.categoryExpanded) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
+            // NEW CODE //
+            for (item in category.items) {
 
-            // BRAND HEADER
-            findInCategory<View>(
-                category,
-                R.id.item_brand_bar
-            )?.visibility =
-                if (
-                    group.placeExpanded &&
-                    category.categoryExpanded &&
-                    category.itemExpanded
-                ) {
-                    View.VISIBLE
-                } else {
-                    View.GONE
-                }
+                item.root.visibility =
+                    if (
+                        group.placeExpanded &&
+                        category.categoryExpanded
+                    ) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
+
+                item.brandContainer.visibility =
+                    if (
+                        group.placeExpanded &&
+                        category.categoryExpanded &&
+                        item.itemExpanded
+                    ) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
+            }
+            // NEW CODE //
         }
 
         updateDropdownSymbols(group)
     }
 
-    // UPDATE ALL EXPANSION STATES
     private fun updateAllExpansionVisibility() {
 
         for (group in groups) {
@@ -1246,7 +1599,6 @@ class Complete : AppCompatActivity() {
             val mainVisibility =
                 if (editMode) View.VISIBLE else View.GONE
 
-            // PLACE SORT
             findInGroup<View>(
                 group,
                 R.id.c_p_sort
@@ -1257,13 +1609,11 @@ class Complete : AppCompatActivity() {
                     View.GONE
                 }
 
-            // PLACE EDIT BUTTON
             findInGroup<View>(
                 group,
                 R.id.c_p_edit
             )?.visibility = mainVisibility
 
-            // PLACE CONTROLS
             val placeVisibility =
                 if (editMode && group.placeEditExpanded) {
                     View.VISIBLE
@@ -1286,10 +1636,8 @@ class Complete : AppCompatActivity() {
                 R.id.c_p_add_list
             )?.visibility = placeVisibility
 
-            // EACH CATEGORY HAS ITS OWN CONTROLS
             for ((index, category) in group.categories.withIndex()) {
 
-                // CATEGORY SORT ONLY ONCE PER PLACE
                 findInCategory<View>(
                     category,
                     R.id.c_c_sort
@@ -1300,36 +1648,11 @@ class Complete : AppCompatActivity() {
                         View.GONE
                     }
 
-                // CATEGORY EDIT BUTTON
                 findInCategory<View>(
                     category,
                     R.id.c_c_edit
                 )?.visibility = mainVisibility
 
-                // ITEM EDIT BUTTON
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_edit
-                )?.visibility = mainVisibility
-
-                // ITEM SORT
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_sort
-                )?.visibility = mainVisibility
-
-                // BRAND CONTROLS
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_b_add
-                )?.visibility = mainVisibility
-
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_b_remove
-                )?.visibility = mainVisibility
-
-                // CATEGORY CONTROLS
                 val categoryVisibility =
                     if (editMode && category.categoryEditExpanded) {
                         View.VISIBLE
@@ -1352,28 +1675,57 @@ class Complete : AppCompatActivity() {
                     R.id.c_c_add_list
                 )?.visibility = categoryVisibility
 
-                // ITEM CONTROLS
-                val itemVisibility =
-                    if (editMode && category.itemEditExpanded) {
-                        View.VISIBLE
-                    } else {
-                        View.GONE
+                // NEW CODE //
+                for ((itemIndex, item) in category.items.withIndex()) {
+
+                    findInItem<View>(
+                        item,
+                        R.id.c_i_edit
+                    )?.visibility = mainVisibility
+
+                    findInItem<View>(
+                        item,
+                        R.id.c_i_sort
+                    )?.visibility = mainVisibility
+
+                    val itemVisibility =
+                        if (editMode && item.itemEditExpanded) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
+
+                    findInItem<View>(
+                        item,
+                        R.id.c_i_add
+                    )?.visibility = itemVisibility
+
+                    findInItem<View>(
+                        item,
+                        R.id.c_i_remove
+                    )?.visibility = itemVisibility
+
+                    findInItem<View>(
+                        item,
+                        R.id.c_i_add_list
+                    )?.visibility = itemVisibility
+
+                    for (brand in item.brands) {
+
+                        findInBrand<View>(
+                            brand.root,
+                            brand.idMap,
+                            R.id.c_i_b_add
+                        )?.visibility = mainVisibility
+
+                        findInBrand<View>(
+                            brand.root,
+                            brand.idMap,
+                            R.id.c_i_b_remove
+                        )?.visibility = mainVisibility
                     }
-
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_add
-                )?.visibility = itemVisibility
-
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_remove
-                )?.visibility = itemVisibility
-
-                findInCategory<View>(
-                    category,
-                    R.id.c_i_add_list
-                )?.visibility = itemVisibility
+                }
+                // NEW CODE //
             }
         }
     }
@@ -1422,7 +1774,7 @@ class Complete : AppCompatActivity() {
 
         input.requestFocus()
 
-        input.addTextChangedListener(object : android.text.TextWatcher {
+        input.addTextChangedListener(object : TextWatcher {
 
             override fun beforeTextChanged(
                 s: CharSequence?,
@@ -1448,7 +1800,7 @@ class Complete : AppCompatActivity() {
                 )
             }
 
-            override fun afterTextChanged(s: android.text.Editable?) {}
+            override fun afterTextChanged(s: Editable?) {}
         })
 
         input.setOnFocusChangeListener { _, hasFocus ->
@@ -1483,12 +1835,21 @@ class Complete : AppCompatActivity() {
         for (category in group.categories) {
 
             category.categoryChanged = false
-            category.itemChanged = false
 
-            category.brandChanged = false
-            category.nameChanged = false
-            category.weightChanged = false
-            category.quantityChanged = false
+            // NEW CODE //
+            for (item in category.items) {
+
+                item.itemChanged = false
+
+                for (brand in item.brands) {
+
+                    brand.brandChanged = false
+                    brand.nameChanged = false
+                    brand.weightChanged = false
+                    brand.quantityChanged = false
+                }
+            }
+            // NEW CODE //
         }
     }
 
@@ -1502,52 +1863,64 @@ class Complete : AppCompatActivity() {
 
     private fun updateNameColors(group: GroupUi) {
 
-        // PLACE
         group.placeName.setTextColor(
             if (!editMode || group.placeChanged) white else muted
         )
 
-        // EACH CATEGORY
         for (category in group.categories) {
 
             if (!editMode) {
 
                 category.categoryName.setTextColor(white)
-                category.itemName.setTextColor(white)
 
-                category.brandName.setTextColor(muted)
-                category.nameName.setTextColor(muted)
-                category.weightName.setTextColor(muted)
-                category.quantityName.setTextColor(muted)
+                // NEW CODE //
+                for (item in category.items) {
+
+                    item.itemName.setTextColor(white)
+
+                    for (brand in item.brands) {
+                        brand.brandName.setTextColor(muted)
+                        brand.nameName.setTextColor(muted)
+                        brand.weightName.setTextColor(muted)
+                        brand.quantityName.setTextColor(muted)
+                    }
+                }
+                // NEW CODE //
 
                 continue
             }
 
-            // CATEGORY / ITEM
             category.categoryName.setTextColor(
                 if (category.categoryChanged) white else muted
             )
 
-            category.itemName.setTextColor(
-                if (category.itemChanged) white else muted
-            )
+            // NEW CODE //
+            for (item in category.items) {
 
-            // BRAND / NAME / WEIGHT / QUANTITY
-            category.brandName.setTextColor(
-                if (category.brandChanged) muted else white
-            )
+                item.itemName.setTextColor(
+                    if (item.itemChanged) white else muted
+                )
 
-            category.nameName.setTextColor(
-                if (category.nameChanged) muted else white
-            )
+                for (brand in item.brands) {
 
-            category.weightName.setTextColor(
-                if (category.weightChanged) muted else white
-            )
+                    brand.brandName.setTextColor(
+                        if (brand.brandChanged) muted else white
+                    )
 
-            category.quantityName.setTextColor(
-                if (category.quantityChanged) muted else white
-            )
+                    brand.nameName.setTextColor(
+                        if (brand.nameChanged) muted else white
+                    )
+
+                    brand.weightName.setTextColor(
+                        if (brand.weightChanged) muted else white
+                    )
+
+                    brand.quantityName.setTextColor(
+                        if (brand.quantityChanged) muted else white
+                    )
+                }
+            }
+            // NEW CODE //
         }
     }
 
@@ -1560,11 +1933,19 @@ class Complete : AppCompatActivity() {
                     group.categories.any { category ->
 
                         category.categoryChanged ||
-                                category.itemChanged ||
-                                category.brandChanged ||
-                                category.nameChanged ||
-                                category.weightChanged ||
-                                category.quantityChanged
+                                // NEW CODE //
+                                category.items.any { item ->
+
+                                    item.itemChanged ||
+                                            item.brands.any { brand ->
+
+                                                brand.brandChanged ||
+                                                        brand.nameChanged ||
+                                                        brand.weightChanged ||
+                                                        brand.quantityChanged
+                                            }
+                                }
+                        // NEW CODE //
                     }
         }
     }
@@ -1572,21 +1953,18 @@ class Complete : AppCompatActivity() {
     // REQUIRED NAMES AND DUPLICATE VALIDATION
     private fun allRequiredNamesFilled(): Boolean {
 
-        // NORMALIZE TEXT
         fun normalize(text: CharSequence): String {
             return text.toString()
                 .trim()
                 .lowercase(Locale.ROOT)
         }
 
-        // PLACE NAMES CANNOT BE EMPTY
         if (groups.any {
                 normalize(it.placeName.text).isEmpty()
             }) {
             return false
         }
 
-        // PLACE NAMES MUST BE UNIQUE
         val placeNames = groups.map {
             normalize(it.placeName.text)
         }
@@ -1595,24 +1973,24 @@ class Complete : AppCompatActivity() {
             return false
         }
 
-        // VALIDATE EACH PLACE
         for (group in groups) {
 
             if (group.categories.isEmpty()) {
                 return false
             }
 
-            // CATEGORY AND ITEM NAMES CANNOT BE EMPTY
             if (group.categories.any { category ->
 
                     normalize(category.categoryName.text).isEmpty() ||
-                            normalize(category.itemName.text).isEmpty()
+                            category.items.isEmpty() ||
+                            category.items.any { item ->
+                                normalize(item.itemName.text).isEmpty()
+                            }
 
                 }) {
                 return false
             }
 
-            // CATEGORY NAMES MUST BE UNIQUE WITHIN THIS PLACE
             val categoryNames = group.categories.map {
                 normalize(it.categoryName.text)
             }
