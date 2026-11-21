@@ -1,4 +1,3 @@
-
 package com.example.shoppinglist
 
 import android.content.Context
@@ -19,6 +18,7 @@ import androidx.appcompat.widget.AppCompatButton
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import java.util.Locale
 
 class Complete : AppCompatActivity() {
 
@@ -247,6 +247,25 @@ class Complete : AppCompatActivity() {
             quantityName = findInGroup(root, idMap, R.id.a_b_quantity)!!
         )
 
+        // PLACEHOLDERS ARE HINTS, NOT TEXT
+        val placeholders = listOf(
+            group.placeName to "[Place]",
+            group.categoryName to "[Category]",
+            group.itemName to "[Item]",
+            group.brandName to "[Brand]",
+            group.nameName to "[Name]",
+            group.weightName to "[Weight]",
+            group.quantityName to "[Quantity]"
+        )
+
+        for ((textView, placeholder) in placeholders) {
+            if (textView.text.toString() == placeholder) {
+                textView.text = ""
+            }
+
+            textView.hint = placeholder
+        }
+
         // PLACE DROPDOWN
         findInGroup<View>(group, R.id.a_p_expand)?.setOnClickListener {
 
@@ -413,10 +432,8 @@ class Complete : AppCompatActivity() {
         }
 
         // ADD PLACE
-        if (isOriginal) {
-            findInGroup<View>(group, R.id.c_p_add)?.setOnClickListener {
-                addGroup()
-            }
+        findInGroup<View>(group, R.id.c_p_add)?.setOnClickListener {
+            addGroup(afterGroup = group)
         }
 
         return group
@@ -425,7 +442,8 @@ class Complete : AppCompatActivity() {
     // ADD DUPLICATED PLACE
     private fun addGroup(
         restoreIndex: Int? = null,
-        persist: Boolean = true
+        persist: Boolean = true,
+        afterGroup: GroupUi? = null
     ) {
 
         val tempRoot = layoutInflater.inflate(
@@ -459,14 +477,37 @@ class Complete : AppCompatActivity() {
             isOriginal = false
         )
 
-        groups.add(newGroupUi)
+        // INSERT AFTER THE SELECTED PLACE
+        val insertIndex = if (afterGroup != null) {
+            groups.indexOf(afterGroup) + 1
+        } else {
+            groups.size
+        }
 
-        // LOAD SAVED DATA OR DEFAULT DATA
-        val index = restoreIndex ?: groups.lastIndex
+        groups.add(insertIndex, newGroupUi)
 
-        loadGroupData(newGroupUi, index)
+        // LOAD SAVED DATA OR INITIALIZE NEW PLACE
+        if (restoreIndex != null) {
+            loadGroupData(newGroupUi, restoreIndex)
+        } else {
+            newGroupUi.placeName.text = ""
+            newGroupUi.categoryName.text = ""
+            newGroupUi.itemName.text = ""
 
-        if (restoreIndex == null) {
+            newGroupUi.brandName.text = ""
+            newGroupUi.nameName.text = ""
+            newGroupUi.weightName.text = ""
+            newGroupUi.quantityName.text = ""
+
+            newGroupUi.savedPlaceName = ""
+            newGroupUi.savedCategoryName = ""
+            newGroupUi.savedItemName = ""
+
+            newGroupUi.savedBrandName = ""
+            newGroupUi.savedNameName = ""
+            newGroupUi.savedWeightName = ""
+            newGroupUi.savedQuantityName = ""
+
             newGroupUi.placeExpanded = false
             newGroupUi.categoryExpanded = false
             newGroupUi.itemExpanded = false
@@ -483,15 +524,19 @@ class Complete : AppCompatActivity() {
 
         params.topMargin = dp(20)
 
-        scroll.addView(newGroup, params)
+        // INSERT VISUALLY AFTER THE SELECTED PLACE
+        scroll.addView(
+            newGroup,
+            insertIndex,
+            params
+        )
 
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
 
-        if (persist) {
-            persistAllGroups()
-        }
+        // Do not save automatically.
+        // Changes are saved only when the Save button is pressed.
     }
 
     // LOAD GROUP DATA
@@ -509,39 +554,32 @@ class Complete : AppCompatActivity() {
         }
 
         group.placeName.text = dataPreferences.getString(
-            key("place_name"),
-            group.placeName.text.toString()
-        )
+            key("place_name"), ""
+        ) ?: ""
 
         group.categoryName.text = dataPreferences.getString(
-            key("category_name"),
-            group.categoryName.text.toString()
-        )
+            key("category_name"), ""
+        ) ?: ""
 
         group.itemName.text = dataPreferences.getString(
-            key("item_name"),
-            group.itemName.text.toString()
-        )
+            key("item_name"), ""
+        ) ?: ""
 
         group.brandName.text = dataPreferences.getString(
-            key("brand_name"),
-            group.brandName.text.toString()
-        )
+            key("brand_name"), ""
+        ) ?: ""
 
         group.nameName.text = dataPreferences.getString(
-            key("name_name"),
-            group.nameName.text.toString()
-        )
+            key("name_name"), ""
+        ) ?: ""
 
         group.weightName.text = dataPreferences.getString(
-            key("weight_name"),
-            group.weightName.text.toString()
-        )
+            key("weight_name"), ""
+        ) ?: ""
 
         group.quantityName.text = dataPreferences.getString(
-            key("quantity_name"),
-            group.quantityName.text.toString()
-        )
+            key("quantity_name"), ""
+        ) ?: ""
 
         group.savedPlaceName = group.placeName.text.toString()
         group.savedCategoryName = group.categoryName.text.toString()
@@ -828,6 +866,16 @@ class Complete : AppCompatActivity() {
 
             findInGroup<View>(
                 group,
+                R.id.c_c_sort
+            )?.visibility = mainVisibility
+
+            findInGroup<View>(
+                group,
+                R.id.c_i_sort
+            )?.visibility = mainVisibility
+
+            findInGroup<View>(
+                group,
                 R.id.c_p_edit
             )?.visibility = mainVisibility
 
@@ -1103,15 +1151,58 @@ class Complete : AppCompatActivity() {
         }
     }
 
-    // REQUIRED NAMES
+    // REQUIRED NAMES AND DUPLICATE VALIDATION
     private fun allRequiredNamesFilled(): Boolean {
 
-        return groups.all { group ->
-
-            group.placeName.text.isNotBlank() &&
-                    group.categoryName.text.isNotBlank() &&
-                    group.itemName.text.isNotBlank()
+        // Normalize text for case-insensitive comparison
+        fun normalize(text: CharSequence): String {
+            return text.toString()
+                .trim()
+                .lowercase(Locale.ROOT)
         }
+
+        // Check required names
+        if (!groups.all { group ->
+
+                normalize(group.placeName.text).isNotEmpty() &&
+                        normalize(group.categoryName.text).isNotEmpty() &&
+                        normalize(group.itemName.text).isNotEmpty()
+
+            }) {
+            return false
+        }
+
+        // PLACE NAMES MUST BE UNIQUE
+        val placeNames = groups.map {
+            normalize(it.placeName.text)
+        }
+
+        if (placeNames.size != placeNames.toSet().size) {
+            return false
+        }
+
+        // CATEGORY NAMES MUST BE UNIQUE INSIDE EACH PLACE
+        for (group in groups) {
+
+            val categoryNames = listOf(
+                normalize(group.categoryName.text)
+            )
+
+            if (categoryNames.size != categoryNames.toSet().size) {
+                return false
+            }
+
+            // ITEM NAMES MUST BE UNIQUE INSIDE EACH CATEGORY
+            val itemNames = listOf(
+                normalize(group.itemName.text)
+            )
+
+            if (itemNames.size != itemNames.toSet().size) {
+                return false
+            }
+        }
+
+        return true
     }
 
     // UPDATE SAVE BUTTON
