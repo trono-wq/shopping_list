@@ -9,8 +9,6 @@ import android.text.InputType
 import android.text.TextWatcher
 import android.text.Editable
 import android.util.SparseIntArray
-import android.view.View
-import android.view.ViewGroup
 import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -24,11 +22,15 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
+import android.content.ClipData
+import android.view.View
+import android.view.ViewGroup
 
 class Complete : AppCompatActivity() {
 
     private var editMode = false
     private var structureChanged = false
+    private var searchQuery = ""
 
     private val gray = Color.rgb(102, 102, 102)
     private val muted = Color.rgb(153, 153, 153)
@@ -171,6 +173,32 @@ class Complete : AppCompatActivity() {
         scroll = findViewById(R.id.scroll)
         editButton = findViewById(R.id.c_edit)
 
+        findViewById<EditText>(R.id.a_search).addTextChangedListener(
+            object : TextWatcher {
+
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+                }
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                    searchQuery = s?.toString()?.trim().orEmpty()
+                    updateAllExpansionVisibility()
+                }
+
+                override fun afterTextChanged(s: Editable?) {
+                }
+            }
+        )
+
         // ORIGINAL GROUP
         val originalRoot = findViewById<LinearLayout>(R.id.group)
 
@@ -181,6 +209,19 @@ class Complete : AppCompatActivity() {
         )
 
         groups.add(originalGroup)
+
+        enableListDragging(
+            scroll,
+            groups,
+            { it.root }
+        ) {
+            structureChanged = true
+
+            updateGroupSpacing()
+            updateAllExpansionVisibility()
+            updateEditVisibility()
+            updateSaveButton()
+        }
 
         loadGroupData(originalGroup, 0)
 
@@ -278,6 +319,8 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        refreshShoppingData()
+        updateShoppingButtonColors()
     }
 
     // SETUP GROUP
@@ -353,6 +396,17 @@ class Complete : AppCompatActivity() {
 
         group.categories.add(firstCategory)
 
+        enableListDragging(
+            group.categoryContainer,
+            group.categories,
+            { it.root }
+        ) {
+            structureChanged = true
+            updateAllExpansionVisibility()
+            updateEditVisibility()
+            updateSaveButton()
+        }
+
         findInGroup<View>(
             group,
             R.id.a_p_expand
@@ -377,7 +431,7 @@ class Complete : AppCompatActivity() {
 
         group.placeName.setOnClickListener {
 
-            if (editMode) {
+            if (editMode && !isPlaceLocked(group)) {
                 editName(
                     group.placeName,
                     "[Place]",
@@ -390,6 +444,25 @@ class Complete : AppCompatActivity() {
                     updateSaveButton()
                 }
             }
+        }
+
+        makeEntryDraggable(
+            group.placeName,
+            group.root,
+            scroll
+        ) {
+            group.placeExpanded = false
+
+            for (category in group.categories) {
+                category.categoryExpanded = false
+
+                for (item in category.items) {
+                    item.itemExpanded = false
+                }
+            }
+
+            saveExpansionState(group)
+            updateGroupExpansion(group)
         }
 
         findInGroup<View>(
@@ -412,6 +485,47 @@ class Complete : AppCompatActivity() {
         )?.setOnClickListener {
             sortGroups()
         }
+
+
+        // SHOPPING LIST BUTTONS
+
+        findInGroup<View>(group, R.id.c_p_add_list)
+            ?.setOnClickListener {
+
+                val keys = allKeysInPlace(group)
+                val selected = ShoppingListStore.getSelections(this)
+
+                val shouldSelect = !keys.all { it in selected }
+
+                ShoppingListStore.setSelected(
+                    this,
+                    keys,
+                    shouldSelect
+                )
+
+                refreshShoppingData()
+                updateShoppingButtonColors()
+                updateAllNameColors()
+            }
+
+        findInGroup<View>(group, R.id.c_p_add_all_list)
+            ?.setOnClickListener {
+
+                val keys = allKeysInShoppingList()
+                val selected = ShoppingListStore.getSelections(this)
+
+                val shouldSelect = !keys.all { it in selected }
+
+                ShoppingListStore.setSelected(
+                    this,
+                    keys,
+                    shouldSelect
+                )
+
+                refreshShoppingData()
+                updateShoppingButtonColors()
+                updateAllNameColors()
+            }
 
         return group
     }
@@ -453,6 +567,17 @@ class Complete : AppCompatActivity() {
 
         category.items.add(firstItem)
 
+        enableListDragging(
+            category.itemContainer,
+            category.items,
+            { it.root }
+        ) {
+            structureChanged = true
+            updateAllExpansionVisibility()
+            updateEditVisibility()
+            updateSaveButton()
+        }
+
         findInCategory<View>(
             category,
             R.id.a_c_expand
@@ -479,7 +604,7 @@ class Complete : AppCompatActivity() {
 
         category.categoryName.setOnClickListener {
 
-            if (editMode) {
+            if (editMode && !isCategoryLocked(group, category)) {
                 editName(
                     category.categoryName,
                     "[Category]",
@@ -492,6 +617,21 @@ class Complete : AppCompatActivity() {
                     updateSaveButton()
                 }
             }
+        }
+
+        makeEntryDraggable(
+            category.categoryName,
+            category.root,
+            group.categoryContainer
+        ) {
+            category.categoryExpanded = false
+
+            for (item in category.items) {
+                item.itemExpanded = false
+            }
+
+            saveExpansionState(group)
+            updateGroupExpansion(group)
         }
 
         findInCategory<View>(
@@ -511,6 +651,47 @@ class Complete : AppCompatActivity() {
         )?.setOnClickListener {
             sortCategories(group)
         }
+
+        // SHOPPING LIST BUTTONS
+
+        findInCategory<View>(category, R.id.c_c_add_list)
+            ?.setOnClickListener {
+
+                val keys = allKeysInCategory(group, category)
+                val selected = ShoppingListStore.getSelections(this)
+
+                val shouldSelect = !keys.all { it in selected }
+
+                ShoppingListStore.setSelected(
+                    this,
+                    keys,
+                    shouldSelect
+                )
+
+                refreshShoppingData()
+                updateShoppingButtonColors()
+                updateAllNameColors()
+            }
+
+        findInCategory<View>(category, R.id.c_c_add_all_list)
+            ?.setOnClickListener {
+
+                val keys = allKeysInGroup(group)
+                val selected = ShoppingListStore.getSelections(this)
+
+                val shouldSelect = !keys.all { it in selected }
+
+                ShoppingListStore.setSelected(
+                    this,
+                    keys,
+                    shouldSelect
+                )
+
+                refreshShoppingData()
+                updateShoppingButtonColors()
+                updateAllNameColors()
+            }
+
 
         return category
     }
@@ -555,6 +736,16 @@ class Complete : AppCompatActivity() {
 
         item.brands.add(firstBrand)
 
+        enableListDragging(
+            item.brandContainer,
+            item.brands,
+            { it.root }
+        ) {
+            structureChanged = true
+            updateEditVisibility()
+            updateSaveButton()
+        }
+
         findInItem<View>(
             item,
             R.id.a_i_expand
@@ -588,6 +779,19 @@ class Complete : AppCompatActivity() {
         item.itemName.setOnClickListener {
 
             if (editMode) {
+
+                val parentGroup = groups.firstOrNull {
+                    it.categories.any { parentCategory ->
+                        parentCategory.items.contains(item)
+                    }
+                }
+
+                if (parentGroup == null ||
+                    isItemLocked(parentGroup, category, item)
+                ) {
+                    return@setOnClickListener
+                }
+
                 editName(
                     item.itemName,
                     "[Item]",
@@ -599,6 +803,25 @@ class Complete : AppCompatActivity() {
                     updateAllNameColors()
                     updateSaveButton()
                 }
+            }
+        }
+
+        makeEntryDraggable(
+            item.itemName,
+            item.root,
+            category.itemContainer
+        ) {
+            item.itemExpanded = false
+
+            val group = groups.firstOrNull {
+                it.categories.contains(category)
+            }
+
+            if (group != null) {
+                saveExpansionState(group)
+                updateGroupExpansion(group)
+            } else {
+                item.brandContainer.visibility = View.GONE
             }
         }
 
@@ -627,6 +850,61 @@ class Complete : AppCompatActivity() {
         )?.setOnClickListener {
             sortItems(category)
         }
+
+        // SHOPPING LIST BUTTONS
+
+        findInItem<View>(item, R.id.c_i_add_list)
+            ?.setOnClickListener {
+
+                val parentGroup = groups.firstOrNull {
+                    it.categories.any { category ->
+                        category.items.contains(item)
+                    }
+                }
+
+                val parentCategory = groups
+                    .flatMap { it.categories }
+                    .firstOrNull { it.items.contains(item) }
+
+                if (parentGroup != null && parentCategory != null) {
+
+                    ShoppingListStore.toggle(
+                        this,
+                        itemKey(parentGroup, parentCategory, item)
+                    )
+
+                    refreshShoppingData()
+                    updateShoppingButtonColors()
+                    updateAllNameColors()
+                }
+            }
+
+        findInItem<View>(item, R.id.c_i_add_all_list)
+            ?.setOnClickListener {
+
+                val parentGroup = groups.firstOrNull {
+                    it.categories.contains(category)
+                }
+
+                if (parentGroup != null) {
+
+                    val keys = allKeysInItem(parentGroup, category)
+                    val selected = ShoppingListStore.getSelections(this)
+
+                    val shouldSelect = !keys.all { it in selected }
+
+                    ShoppingListStore.setSelected(
+                        this,
+                        keys,
+                        shouldSelect
+                    )
+
+                    refreshShoppingData()
+                    updateShoppingButtonColors()
+                    updateAllNameColors()
+                }
+            }
+
         return item
     }
 
@@ -664,7 +942,7 @@ class Complete : AppCompatActivity() {
         }
 
         brand.brandName.setOnClickListener {
-            if (editMode) {
+            if (editMode && !isItemLockedForBrand(item)) {
                 editBrandField(
                     brand,
                     brand.brandName,
@@ -676,7 +954,7 @@ class Complete : AppCompatActivity() {
         }
 
         brand.nameName.setOnClickListener {
-            if (editMode) {
+            if (editMode && !isItemLockedForBrand(item)) {
                 editBrandField(
                     brand,
                     brand.nameName,
@@ -688,7 +966,7 @@ class Complete : AppCompatActivity() {
         }
 
         brand.weightName.setOnClickListener {
-            if (editMode) {
+            if (editMode && !isItemLockedForBrand(item)) {
                 editBrandField(
                     brand,
                     brand.weightName,
@@ -700,7 +978,7 @@ class Complete : AppCompatActivity() {
         }
 
         brand.quantityName.setOnClickListener {
-            if (editMode) {
+            if (editMode && !isItemLockedForBrand(item)) {
                 editBrandField(
                     brand,
                     brand.quantityName,
@@ -710,6 +988,30 @@ class Complete : AppCompatActivity() {
                 )
             }
         }
+
+        makeEntryDraggable(
+            brand.brandName,
+            brand.root,
+            item.brandContainer
+        ) {}
+
+        makeEntryDraggable(
+            brand.nameName,
+            brand.root,
+            item.brandContainer
+        ) {}
+
+        makeEntryDraggable(
+            brand.weightName,
+            brand.root,
+            item.brandContainer
+        ) {}
+
+        makeEntryDraggable(
+            brand.quantityName,
+            brand.root,
+            item.brandContainer
+        ) {}
 
         // ADD BRAND ROW
         findInBrand<View>(
@@ -1563,16 +1865,25 @@ class Complete : AppCompatActivity() {
     // UPDATE DROPDOWN SYMBOLS
     private fun updateDropdownSymbols(group: GroupUi) {
 
+        val searching = searchQuery.isNotBlank()
+
+        val placeMatches = group.placeName.text
+            .toString()
+            .contains(searchQuery, ignoreCase = true)
+
         findInGroup<TextView>(
             group,
             R.id.a_p_expand
-        )?.apply {
+        )?.let { view ->
 
-            text = if (group.placeExpanded) "v" else ">"
+            view.text = if (
+                group.placeExpanded &&
+                (!searching || placeMatches)
+            ) "v" else ">"
 
-            textSize = 20f
-            gravity = Gravity.CENTER
-            includeFontPadding = false
+            view.textSize = 20f
+            view.gravity = Gravity.CENTER
+            view.includeFontPadding = false
         }
 
         for (category in group.categories) {
@@ -1580,13 +1891,13 @@ class Complete : AppCompatActivity() {
             findInCategory<TextView>(
                 category,
                 R.id.a_c_expand
-            )?.apply {
+            )?.let { view ->
 
-                text = if (category.categoryExpanded) "v" else ">"
+                view.text = if (category.categoryExpanded) "v" else ">"
 
-                textSize = 20f
-                gravity = Gravity.CENTER
-                includeFontPadding = false
+                view.textSize = 20f
+                view.gravity = Gravity.CENTER
+                view.includeFontPadding = false
             }
 
             for (item in category.items) {
@@ -1594,13 +1905,13 @@ class Complete : AppCompatActivity() {
                 findInItem<TextView>(
                     item,
                     R.id.a_i_expand
-                )?.apply {
+                )?.let { view ->
 
-                    text = if (item.itemExpanded) "v" else ">"
+                    view.text = if (item.itemExpanded) "v" else ">"
 
-                    textSize = 20f
-                    gravity = Gravity.CENTER
-                    includeFontPadding = false
+                    view.textSize = 20f
+                    view.gravity = Gravity.CENTER
+                    view.includeFontPadding = false
                 }
             }
         }
@@ -1608,6 +1919,129 @@ class Complete : AppCompatActivity() {
 
     // UPDATE ONE GROUP'S EXPANSION
     private fun updateGroupExpansion(group: GroupUi) {
+
+        val query = searchQuery.trim()
+
+        // SEARCH MODE
+        if (query.isNotBlank()) {
+
+            val placeMatches = group.placeName.text
+                .toString()
+                .contains(query, ignoreCase = true)
+
+            var groupHasMatch = placeMatches
+
+            for (category in group.categories) {
+
+                val categoryMatches = category.categoryName.text
+                    .toString()
+                    .contains(query, ignoreCase = true)
+
+                var categoryHasMatch = categoryMatches
+
+                val itemMatches = mutableMapOf<ItemUi, Boolean>()
+                val brandMatches = mutableMapOf<BrandUi, Boolean>()
+
+                for (item in category.items) {
+
+                    val matchesItem = item.itemName.text
+                        .toString()
+                        .contains(query, ignoreCase = true)
+
+                    var matchesBrand = false
+
+                    for (brand in item.brands) {
+
+                        val matches = listOf(
+                            brand.brandName,
+                            brand.nameName,
+                            brand.weightName,
+                            brand.quantityName
+                        ).any {
+                            it.text.toString()
+                                .contains(query, ignoreCase = true)
+                        }
+
+                        brandMatches[brand] = matches
+
+                        if (matches) {
+                            matchesBrand = true
+                        }
+                    }
+
+                    val matchesEntry = matchesItem || matchesBrand
+
+                    itemMatches[item] = matchesEntry
+
+                    if (matchesEntry) {
+                        categoryHasMatch = true
+                    }
+                }
+
+                if (categoryHasMatch) {
+                    groupHasMatch = true
+                }
+
+                val categoryVisible =
+                    categoryHasMatch ||
+                            (placeMatches && group.placeExpanded)
+
+                category.root.visibility =
+                    if (categoryVisible) View.VISIBLE else View.GONE
+
+                for (item in category.items) {
+
+                    val matchesEntry = itemMatches[item] == true
+
+                    val showChildren =
+                        categoryVisible && category.categoryExpanded
+
+                    val itemVisible =
+                        matchesEntry || showChildren
+
+                    item.root.visibility =
+                        if (itemVisible) View.VISIBLE else View.GONE
+
+                    val showAllBrands =
+                        itemVisible && item.itemExpanded
+
+                    var matchingBrandFound = false
+
+                    for (brand in item.brands) {
+
+                        val matches = brandMatches[brand] == true
+
+                        if (matches) {
+                            matchingBrandFound = true
+                        }
+
+                        brand.root.visibility =
+                            if (matches || showAllBrands) {
+                                View.VISIBLE
+                            } else {
+                                View.GONE
+                            }
+                    }
+
+                    item.brandContainer.visibility =
+                        if (matchingBrandFound || showAllBrands) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
+                }
+            }
+
+            group.root.visibility =
+                if (groupHasMatch) View.VISIBLE else View.GONE
+
+            updateDropdownSymbols(group)
+            return
+        }
+
+        // NORMAL EXPANSION
+
+        group.root.visibility = View.VISIBLE
 
         for (category in group.categories) {
 
@@ -1636,11 +2070,16 @@ class Complete : AppCompatActivity() {
                     } else {
                         View.GONE
                     }
+
+                for (brand in item.brands) {
+                    brand.root.visibility = View.VISIBLE
+                }
             }
         }
 
         updateDropdownSymbols(group)
     }
+
 
     private fun updateAllExpansionVisibility() {
 
@@ -1776,7 +2215,15 @@ class Complete : AppCompatActivity() {
                 findInCategory<View>(
                     category,
                     R.id.c_c_add_list
-                )?.visibility = categoryVisibility
+                )?.visibility =
+                    if (
+                        categoryVisibility == View.VISIBLE &&
+                        !isPlaceLocked(group)
+                    ) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
 
                 for (item in category.items) {
 
@@ -1806,7 +2253,11 @@ class Complete : AppCompatActivity() {
                         item,
                         R.id.c_i_add_all_list
                     )?.visibility =
-                        if (editMode && category.items.indexOf(item) == 0) {
+                        if (
+                            editMode &&
+                            category.items.indexOf(item) == 0 &&
+                            category.items.size > 1
+                        ) {
                             View.VISIBLE
                         } else {
                             View.GONE
@@ -1837,7 +2288,16 @@ class Complete : AppCompatActivity() {
                     findInItem<View>(
                         item,
                         R.id.c_i_add_list
-                    )?.visibility = itemVisibility
+                    )?.visibility =
+                        if (
+                            itemVisibility == View.VISIBLE &&
+                            !isPlaceLocked(group) &&
+                            !isCategoryLocked(group, category)
+                        ) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
 
                     for (brand in item.brands) {
 
@@ -1998,57 +2458,60 @@ class Complete : AppCompatActivity() {
 
     private fun updateNameColors(group: GroupUi) {
 
+        val placeLocked = isPlaceLocked(group)
+
         group.placeName.setTextColor(
-            if (!editMode || group.placeChanged) white else muted
+            if (placeLocked) muted
+            else if (!editMode || group.placeChanged) white
+            else muted
         )
 
         for (category in group.categories) {
 
-            if (!editMode) {
-
-                category.categoryName.setTextColor(white)
-
-                for (item in category.items) {
-
-                    item.itemName.setTextColor(white)
-
-                    for (brand in item.brands) {
-                        brand.brandName.setTextColor(muted)
-                        brand.nameName.setTextColor(muted)
-                        brand.weightName.setTextColor(muted)
-                        brand.quantityName.setTextColor(muted)
-                    }
-                }
-
-                continue
-            }
+            val categoryLocked = isCategoryLocked(group, category)
 
             category.categoryName.setTextColor(
-                if (category.categoryChanged) white else muted
+                if (categoryLocked) muted
+                else if (!editMode || category.categoryChanged) white
+                else muted
             )
 
             for (item in category.items) {
 
+                val itemLocked = isItemLocked(group, category, item)
+
                 item.itemName.setTextColor(
-                    if (item.itemChanged) white else muted
+                    if (itemLocked) muted
+                    else if (!editMode || item.itemChanged) white
+                    else muted
                 )
 
                 for (brand in item.brands) {
 
+                    val brandColor = if (itemLocked || !editMode) {
+                        muted
+                    } else {
+                        white
+                    }
+
                     brand.brandName.setTextColor(
-                        if (brand.brandChanged) muted else white
+                        if (!itemLocked && editMode && brand.brandChanged) muted
+                        else brandColor
                     )
 
                     brand.nameName.setTextColor(
-                        if (brand.nameChanged) muted else white
+                        if (!itemLocked && editMode && brand.nameChanged) muted
+                        else brandColor
                     )
 
                     brand.weightName.setTextColor(
-                        if (brand.weightChanged) muted else white
+                        if (!itemLocked && editMode && brand.weightChanged) muted
+                        else brandColor
                     )
 
                     brand.quantityName.setTextColor(
-                        if (brand.quantityChanged) muted else white
+                        if (!itemLocked && editMode && brand.quantityChanged) muted
+                        else brandColor
                     )
                 }
             }
@@ -2240,7 +2703,146 @@ class Complete : AppCompatActivity() {
         updateSaveButton()
     }
 
+    // DRAG PAYLOAD
+    private data class DragPayload(
+        val draggedView: View,
+        val parent: ViewGroup
+    )
+
+
+    // MAKE ENTRY DRAGGABLE
+    private fun makeEntryDraggable(
+        nameView: View,
+        entryRoot: View,
+        container: ViewGroup,
+        onLongPressCollapse: () -> Unit
+    ) {
+
+        nameView.setOnLongClickListener {
+
+            if (!editMode) {
+                return@setOnLongClickListener false
+            }
+
+            onLongPressCollapse()
+
+            val payload = DragPayload(
+                draggedView = entryRoot,
+                parent = container
+            )
+
+            val clipData = ClipData.newPlainText(
+                "shopping_list_entry",
+                "move"
+            )
+
+            nameView.startDragAndDrop(
+                clipData,
+                View.DragShadowBuilder(nameView),
+                payload,
+                0
+            )
+        }
+    }
+
+
+    // ENABLE LIST DRAGGING
+    private fun <T> enableListDragging(
+        parent: ViewGroup,
+        entries: MutableList<T>,
+        rootOf: (T) -> View,
+        onReordered: () -> Unit
+    ) {
+
+        parent.setOnDragListener { _, event ->
+
+            when (event.action) {
+
+                android.view.DragEvent.ACTION_DRAG_STARTED -> {
+
+                    val payload = event.localState as? DragPayload
+
+                    payload?.parent === parent
+                }
+
+                android.view.DragEvent.ACTION_DROP -> {
+
+                    val payload = event.localState as? DragPayload
+
+                    if (payload == null || payload.parent !== parent) {
+                        return@setOnDragListener false
+                    }
+
+                    val draggedView = payload.draggedView
+
+                    val currentViews = entries.map {
+                        rootOf(it)
+                    }
+
+                    if (!currentViews.contains(draggedView)) {
+                        return@setOnDragListener false
+                    }
+
+                    val remainingViews = currentViews.filter {
+                        it !== draggedView
+                    }
+
+                    val firstEntryTop = remainingViews.firstOrNull()?.top ?: 0
+
+                    val dropY = event.y.coerceAtLeast(firstEntryTop.toFloat())
+
+                    val insertIndex = remainingViews.indexOfFirst { child ->
+
+                        dropY < child.top + child.height / 2f
+
+                    }.let { index ->
+
+                        if (index < 0) remainingViews.size else index
+                    }
+
+                    val orderedViews = remainingViews.toMutableList().apply {
+                        add(insertIndex, draggedView)
+                    }
+
+                    val orderedEntries = orderedViews.mapNotNull { view ->
+
+                        entries.firstOrNull {
+                            rootOf(it) === view
+                        }
+                    }
+
+                    if (orderedEntries.size == entries.size) {
+
+                        val changed = entries.indices.any { index ->
+                            entries[index] !== orderedEntries[index]
+                        }
+
+                        if (changed) {
+
+                            entries.clear()
+                            entries.addAll(orderedEntries)
+
+                            reorderViews(
+                                parent,
+                                orderedViews
+                            )
+
+                            onReordered()
+                        }
+                    }
+
+                    true
+                }
+
+                android.view.DragEvent.ACTION_DRAG_ENDED -> true
+
+                else -> true
+            }
+        }
+    }
+
     // SORT VIEWS
+    // REORDER VIEWS
     private fun reorderViews(
         parent: ViewGroup,
         orderedViews: List<View>
@@ -2252,22 +2854,29 @@ class Complete : AppCompatActivity() {
 
         if (existingViews.isEmpty()) return
 
-        val startIndex = existingViews.minOf {
-            parent.indexOfChild(it)
-        }
+        // Save the original positions occupied by draggable entries
+        val originalPositions = existingViews
+            .map { parent.indexOfChild(it) }
+            .sorted()
 
+        // Save each view's layout parameters
         val savedParams = existingViews.associateWith {
             it.layoutParams
         }
 
-        for (view in existingViews) {
-            parent.removeView(view)
+        // Remove only draggable entries
+        existingViews.forEach {
+            parent.removeView(it)
         }
 
-        for ((index, view) in existingViews.withIndex()) {
+        // Put reordered entries into the same original positions
+        for ((index, view) in orderedViews.withIndex()) {
+
+            if (view !in existingViews) continue
+
             parent.addView(
                 view,
-                startIndex + index,
+                originalPositions[index],
                 savedParams[view]
             )
         }
@@ -2434,5 +3043,342 @@ class Complete : AppCompatActivity() {
 
     private fun updateRemoveVisibilityForItem(item: ItemUi) {
         updateEditVisibility()
+    }
+
+    // SHOPPING LIST SELECTION
+
+    private fun placeKey(group: GroupUi): String {
+        return ShoppingListStore.path(
+            "P",
+            group.placeName.text.toString()
+        )
+    }
+
+    private fun categoryKey(
+        group: GroupUi,
+        category: CategoryUi
+    ): String {
+        return ShoppingListStore.path(
+            "C",
+            group.placeName.text.toString(),
+            category.categoryName.text.toString()
+        )
+    }
+
+    private fun itemKey(
+        group: GroupUi,
+        category: CategoryUi,
+        item: ItemUi
+    ): String {
+        return ShoppingListStore.path(
+            "I",
+            group.placeName.text.toString(),
+            category.categoryName.text.toString(),
+            item.itemName.text.toString()
+        )
+    }
+
+    // ALL ENTRIES UNDER ONE PLACE
+
+    private fun allKeysInPlace(group: GroupUi): List<String> {
+
+        val keys = mutableListOf<String>()
+
+        keys.add(placeKey(group))
+
+        for (category in group.categories) {
+
+            keys.add(categoryKey(group, category))
+
+            for (item in category.items) {
+                keys.add(itemKey(group, category, item))
+            }
+        }
+
+        return keys
+    }
+
+    // ALL PLACES, CATEGORIES, AND ITEMS
+
+    private fun allKeysInShoppingList(): List<String> {
+        return groups.flatMap { allKeysInPlace(it) }
+    }
+
+    // ALL CATEGORIES AND ITEMS UNDER ONE PLACE
+
+    private fun allKeysInGroup(group: GroupUi): List<String> {
+
+        return group.categories.flatMap { category ->
+            allKeysInCategory(group, category)
+        }
+    }
+
+    // ONE CATEGORY AND ITS ITEMS
+
+    private fun allKeysInCategory(
+        group: GroupUi,
+        category: CategoryUi
+    ): List<String> {
+
+        val keys = mutableListOf<String>()
+
+        keys.add(categoryKey(group, category))
+
+        for (item in category.items) {
+            keys.add(itemKey(group, category, item))
+        }
+
+        return keys
+    }
+
+    // ALL ITEMS UNDER ONE CATEGORY
+
+    private fun allKeysInItem(
+        group: GroupUi,
+        category: CategoryUi
+    ): List<String> {
+
+        return category.items.map { item ->
+            itemKey(group, category, item)
+        }
+    }
+
+    // SELECTION STATES
+
+    private fun isPlaceLocked(group: GroupUi): Boolean {
+
+        val selected = ShoppingListStore.getSelections(this)
+        val keys = allKeysInPlace(group)
+
+        return keys.isNotEmpty() && keys.all { it in selected }
+    }
+
+    private fun isCategoryLocked(
+        group: GroupUi,
+        category: CategoryUi
+    ): Boolean {
+
+        val selected = ShoppingListStore.getSelections(this)
+        val keys = allKeysInCategory(group, category)
+
+        return keys.isNotEmpty() && keys.all { it in selected }
+    }
+
+    private fun isItemLocked(
+        group: GroupUi,
+        category: CategoryUi,
+        item: ItemUi
+    ): Boolean {
+
+        val selected = ShoppingListStore.getSelections(this)
+
+        return placeKey(group) in selected ||
+                categoryKey(group, category) in selected ||
+                itemKey(group, category, item) in selected
+    }
+
+    private fun refreshShoppingData() {
+
+        val selected = ShoppingListStore.getSelections(this)
+        val result = org.json.JSONArray()
+
+        for (group in groups) {
+
+            val place = group.placeName.text.toString()
+
+            if (place.isBlank()) continue
+
+            val placeSelected = placeKey(group) in selected
+
+            val placeObject = org.json.JSONObject()
+            placeObject.put("place", place)
+
+            val categoriesArray = org.json.JSONArray()
+
+            var hasSelectedContent = false
+
+            for (category in group.categories) {
+
+                val categoryName = category.categoryName.text.toString()
+
+                if (categoryName.isBlank()) continue
+
+                val categorySelected =
+                    placeSelected ||
+                            categoryKey(group, category) in selected
+
+                val categoryObject = org.json.JSONObject()
+                categoryObject.put("category", categoryName)
+
+                val itemsArray = org.json.JSONArray()
+
+                for (item in category.items) {
+
+                    val itemName = item.itemName.text.toString()
+
+                    if (itemName.isBlank()) continue
+
+                    val itemSelected =
+                        categorySelected ||
+                                itemKey(group, category, item) in selected
+
+                    if (!itemSelected) continue
+
+                    val itemObject = org.json.JSONObject()
+                    itemObject.put("item", itemName)
+
+                    val brandsArray = org.json.JSONArray()
+
+                    for (brand in item.brands) {
+
+                        if (
+                            brand.brandName.text.isBlank() &&
+                            brand.nameName.text.isBlank() &&
+                            brand.weightName.text.isBlank() &&
+                            brand.quantityName.text.isBlank()
+                        ) {
+                            continue
+                        }
+
+                        val brandObject = org.json.JSONObject()
+
+                        brandObject.put(
+                            "brand",
+                            brand.brandName.text.toString()
+                        )
+
+                        brandObject.put(
+                            "name",
+                            brand.nameName.text.toString()
+                        )
+
+                        brandObject.put(
+                            "weight",
+                            brand.weightName.text.toString()
+                        )
+
+                        brandObject.put(
+                            "quantity",
+                            brand.quantityName.text.toString()
+                        )
+
+                        brandsArray.put(brandObject)
+                    }
+
+                    itemObject.put("brands", brandsArray)
+
+                    itemsArray.put(itemObject)
+                    hasSelectedContent = true
+                }
+
+                if (categorySelected || itemsArray.length() > 0) {
+
+                    categoryObject.put("items", itemsArray)
+                    categoriesArray.put(categoryObject)
+
+                    hasSelectedContent = true
+                }
+            }
+
+            if (placeSelected || hasSelectedContent) {
+
+                placeObject.put("categories", categoriesArray)
+                result.put(placeObject)
+            }
+        }
+
+        ShoppingListStore.saveShoppingData(this, result)
+    }
+
+    private fun updateShoppingButtonColors() {
+
+        val selected = ShoppingListStore.getSelections(this)
+
+        fun setColor(view: View?, isSelected: Boolean) {
+
+            val button = view as? AppCompatButton ?: return
+
+            button.backgroundTintList = ColorStateList.valueOf(
+                if (isSelected) muted else gray
+            )
+
+            button.setTextColor(
+                if (isSelected) gray else Color.rgb(29, 27, 32)
+            )
+        }
+
+        val globalKeys = allKeysInShoppingList()
+
+        val globalSelected =
+            globalKeys.isNotEmpty() &&
+                    globalKeys.all { it in selected }
+
+        for (group in groups) {
+
+            setColor(
+                findInGroup(group, R.id.c_p_add_list),
+                isPlaceLocked(group)
+            )
+
+            setColor(
+                findInGroup(group, R.id.c_p_add_all_list),
+                globalSelected
+            )
+
+            val groupKeys = allKeysInGroup(group)
+
+            val groupSelected =
+                groupKeys.isNotEmpty() &&
+                        groupKeys.all { it in selected }
+
+            for (category in group.categories) {
+
+                setColor(
+                    findInCategory(category, R.id.c_c_add_list),
+                    isCategoryLocked(group, category)
+                )
+
+                setColor(
+                    findInCategory(category, R.id.c_c_add_all_list),
+                    groupSelected
+                )
+
+                val itemKeys = allKeysInItem(group, category)
+
+                val itemsSelected =
+                    itemKeys.isNotEmpty() &&
+                            itemKeys.all { it in selected }
+
+                for (item in category.items) {
+
+                    setColor(
+                        findInItem(item, R.id.c_i_add_list),
+                        isItemLocked(group, category, item)
+                    )
+
+                    setColor(
+                        findInItem(item, R.id.c_i_add_all_list),
+                        itemsSelected
+                    )
+                }
+            }
+        }
+
+        updateEditVisibility()
+    }
+
+    private fun isItemLockedForBrand(item: ItemUi): Boolean {
+
+        val group = groups.firstOrNull { parentGroup ->
+            parentGroup.categories.any { category ->
+                category.items.contains(item)
+            }
+        } ?: return false
+
+        val category = group.categories.firstOrNull {
+            it.items.contains(item)
+        } ?: return false
+
+        return isItemLocked(group, category, item)
     }
 }
