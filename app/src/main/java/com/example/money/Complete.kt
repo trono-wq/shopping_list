@@ -406,6 +406,13 @@ class Complete : AppCompatActivity() {
             removeGroup(group)
         }
 
+        findInGroup<View>(
+            group,
+            R.id.c_p_sort
+        )?.setOnClickListener {
+            sortGroups()
+        }
+
         return group
     }
 
@@ -496,6 +503,13 @@ class Complete : AppCompatActivity() {
 
         findInCategory<View>(category, R.id.c_c_remove)?.setOnClickListener {
             removeCategory(group, category)
+        }
+
+        findInCategory<View>(
+            category,
+            R.id.c_c_sort
+        )?.setOnClickListener {
+            sortCategories(group)
         }
 
         return category
@@ -607,6 +621,12 @@ class Complete : AppCompatActivity() {
             removeItem(category, item)
         }
 
+        findInItem<View>(
+            item,
+            R.id.c_i_sort
+        )?.setOnClickListener {
+            sortItems(category)
+        }
         return item
     }
 
@@ -708,7 +728,11 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        brand.root.findViewById<View>(R.id.c_i_b_remove)?.setOnClickListener {
+        findInBrand<View>(
+            root,
+            idMap,
+            R.id.c_i_b_remove
+        )?.setOnClickListener {
             removeBrand(item, brand)
         }
 
@@ -1647,7 +1671,12 @@ class Complete : AppCompatActivity() {
             findInGroup<View>(
                 group,
                 R.id.c_p_add_all_list
-            )?.visibility = mainVisibility
+            )?.visibility =
+                if (editMode && groups.indexOf(group) == 0) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
 
             findInGroup<TextView>(
                 group,
@@ -1703,7 +1732,12 @@ class Complete : AppCompatActivity() {
                 findInCategory<View>(
                     category,
                     R.id.c_c_add_all_list
-                )?.visibility = mainVisibility
+                )?.visibility =
+                    if (editMode && group.categories.indexOf(category) == 0) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
 
                 findInCategory<TextView>(
                     category,
@@ -1771,7 +1805,12 @@ class Complete : AppCompatActivity() {
                     findInItem<View>(
                         item,
                         R.id.c_i_add_all_list
-                    )?.visibility = mainVisibility
+                    )?.visibility =
+                        if (editMode && category.items.indexOf(item) == 0) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
 
                     val itemVisibility =
                         if (editMode && item.itemEditExpanded) {
@@ -2198,6 +2237,142 @@ class Complete : AppCompatActivity() {
         updateAllExpansionVisibility()
         updateEditVisibility()
         updateAllNameColors()
+        updateSaveButton()
+    }
+
+    // SORT VIEWS
+    private fun reorderViews(
+        parent: ViewGroup,
+        orderedViews: List<View>
+    ) {
+
+        val existingViews = orderedViews.filter {
+            parent.indexOfChild(it) >= 0
+        }
+
+        if (existingViews.isEmpty()) return
+
+        val startIndex = existingViews.minOf {
+            parent.indexOfChild(it)
+        }
+
+        val savedParams = existingViews.associateWith {
+            it.layoutParams
+        }
+
+        for (view in existingViews) {
+            parent.removeView(view)
+        }
+
+        for ((index, view) in existingViews.withIndex()) {
+            parent.addView(
+                view,
+                startIndex + index,
+                savedParams[view]
+            )
+        }
+    }
+
+    // SORT PLACES
+    private fun sortGroups() {
+
+        val sortedGroups = groups.sortedWith(
+            compareBy<GroupUi> {
+                if (it.placeName.text.toString().isBlank()) 0 else 1
+            }.thenBy {
+                it.placeName.text.toString()
+                    .trim()
+                    .lowercase(Locale.ROOT)
+            }
+        )
+
+        val changed = sortedGroups.indices.any {
+            sortedGroups[it] !== groups[it]
+        }
+
+        if (!changed) return
+
+        groups.clear()
+        groups.addAll(sortedGroups)
+
+        reorderViews(
+            scroll,
+            groups.map { it.root }
+        )
+
+        structureChanged = true
+
+        updateGroupSpacing()
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateSaveButton()
+    }
+
+    // SORT CATEGORIES
+    private fun sortCategories(group: GroupUi) {
+
+        val sortedCategories = group.categories.sortedWith(
+            compareBy<CategoryUi> {
+                if (it.categoryName.text.toString().isBlank()) 0 else 1
+            }.thenBy {
+                it.categoryName.text.toString()
+                    .trim()
+                    .lowercase(Locale.ROOT)
+            }
+        )
+
+        val changed = sortedCategories.indices.any {
+            sortedCategories[it] !== group.categories[it]
+        }
+
+        if (!changed) return
+
+        group.categories.clear()
+        group.categories.addAll(sortedCategories)
+
+        reorderViews(
+            group.categoryContainer,
+            group.categories.map { it.root }
+        )
+
+        structureChanged = true
+
+        updateAllExpansionVisibility()
+        updateEditVisibility()
+        updateSaveButton()
+    }
+
+    // SORT ITEMS
+    private fun sortItems(category: CategoryUi) {
+
+        val sortedItems = category.items.sortedWith(
+            compareBy<ItemUi> {
+                if (it.itemName.text.toString().isBlank()) 0 else 1
+            }.thenBy {
+                it.itemName.text.toString()
+                    .trim()
+                    .lowercase(Locale.ROOT)
+            }
+        )
+
+        val changed = sortedItems.indices.any {
+            sortedItems[it] !== category.items[it]
+        }
+
+        if (!changed) return
+
+        category.items.clear()
+        category.items.addAll(sortedItems)
+
+        reorderViews(
+            category.itemContainer,
+            category.items.map { it.root }
+        )
+
+        structureChanged = true
+
+        updateAllExpansionVisibility()
+        updateEditVisibility()
         updateSaveButton()
     }
 

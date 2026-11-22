@@ -32,10 +32,10 @@ class Gucci_Mane : AppCompatActivity() {
             )
 
             view.setPadding(
-                bars.left + 20,
+                bars.left + 0,
                 bars.top + 50,
-                bars.right + 20,
-                bars.bottom + 50
+                bars.right + 0,
+                bars.bottom + 0
             )
 
             insets
