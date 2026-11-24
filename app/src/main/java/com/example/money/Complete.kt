@@ -145,6 +145,7 @@ class Complete : AppCompatActivity() {
             )
 
             view.setPadding(
+
                 bars.left + 20,
                 bars.top + 50,
                 bars.right + 20,
@@ -199,7 +200,7 @@ class Complete : AppCompatActivity() {
             }
         )
 
-        // ORIGINAL GROUP
+// ORIGINAL GROUP
         val originalRoot = findViewById<LinearLayout>(R.id.group)
 
         val originalGroup = setupGroup(
@@ -228,7 +229,7 @@ class Complete : AppCompatActivity() {
         originalGroup.placeExpanded =
             statePreferences.getBoolean("place_expanded", false)
 
-        // RESTORE DUPLICATED PLACES
+// RESTORE DUPLICATED PLACES
         val savedGroupCount = dataPreferences.getInt(
             "group_count",
             1
@@ -243,7 +244,7 @@ class Complete : AppCompatActivity() {
 
         updateAllExpansionVisibility()
 
-        // EDIT / SAVE BUTTON
+// EDIT / SAVE BUTTON
         editButton.setOnClickListener {
 
             if (!editMode) {
@@ -341,6 +342,7 @@ class Complete : AppCompatActivity() {
 
         if (group.placeName.text.toString() == "[Place]") {
             group.placeName.text = ""
+
         }
 
         group.placeName.hint = "[Place]"
@@ -390,6 +392,7 @@ class Complete : AppCompatActivity() {
             root = categoryRoot,
             categorySection = categorySection,
             itemContainer = itemContainer,
+
             firstItemSection = itemSection,
             idMap = idMap
         )
@@ -487,21 +490,17 @@ class Complete : AppCompatActivity() {
         }
 
 
-        // SHOPPING LIST BUTTONS
+// SHOPPING LIST BUTTONS
 
         findInGroup<View>(group, R.id.c_p_add_list)
             ?.setOnClickListener {
 
-                val keys = allKeysInPlace(group)
+                val keys = allItemKeysInPlace(group)
                 val selected = ShoppingListStore.getSelections(this)
+                val shouldSelect = keys.isNotEmpty() && !keys.all { it in selected }
 
-                val shouldSelect = !keys.all { it in selected }
-
-                ShoppingListStore.setSelected(
-                    this,
-                    keys,
-                    shouldSelect
-                )
+                clearAggregateSelectionKeys(group)
+                ShoppingListStore.setSelected(this, keys, shouldSelect)
 
                 refreshShoppingData()
                 updateShoppingButtonColors()
@@ -511,16 +510,12 @@ class Complete : AppCompatActivity() {
         findInGroup<View>(group, R.id.c_p_add_all_list)
             ?.setOnClickListener {
 
-                val keys = allKeysInShoppingList()
+                val keys = allItemKeysInShoppingList()
                 val selected = ShoppingListStore.getSelections(this)
+                val shouldSelect = keys.isNotEmpty() && !keys.all { it in selected }
 
-                val shouldSelect = !keys.all { it in selected }
-
-                ShoppingListStore.setSelected(
-                    this,
-                    keys,
-                    shouldSelect
-                )
+                clearAllAggregateSelectionKeys()
+                ShoppingListStore.setSelected(this, keys, shouldSelect)
 
                 refreshShoppingData()
                 updateShoppingButtonColors()
@@ -537,6 +532,7 @@ class Complete : AppCompatActivity() {
         categorySection: LinearLayout,
         itemContainer: LinearLayout,
         firstItemSection: LinearLayout,
+
         idMap: SparseIntArray
     ): CategoryUi {
 
@@ -586,6 +582,7 @@ class Complete : AppCompatActivity() {
             category.categoryExpanded = !category.categoryExpanded
 
             saveExpansionState(group)
+
             updateGroupExpansion(group)
         }
 
@@ -635,6 +632,7 @@ class Complete : AppCompatActivity() {
         }
 
         findInCategory<View>(
+
             category,
             R.id.c_c_add
         )?.setOnClickListener {
@@ -657,41 +655,19 @@ class Complete : AppCompatActivity() {
         findInCategory<View>(category, R.id.c_c_add_list)
             ?.setOnClickListener {
 
-                val keys = allKeysInCategory(group, category)
+                if (isPlaceFullySelected(group)) return@setOnClickListener
+
+                val keys = allItemKeysInCategory(group, category)
                 val selected = ShoppingListStore.getSelections(this)
+                val shouldSelect = keys.isNotEmpty() && !keys.all { it in selected }
 
-                val shouldSelect = !keys.all { it in selected }
-
-                ShoppingListStore.setSelected(
-                    this,
-                    keys,
-                    shouldSelect
-                )
+                clearAggregateSelectionKeys(group)
+                ShoppingListStore.setSelected(this, keys, shouldSelect)
 
                 refreshShoppingData()
                 updateShoppingButtonColors()
                 updateAllNameColors()
             }
-
-        findInCategory<View>(category, R.id.c_c_add_all_list)
-            ?.setOnClickListener {
-
-                val keys = allKeysInGroup(group)
-                val selected = ShoppingListStore.getSelections(this)
-
-                val shouldSelect = !keys.all { it in selected }
-
-                ShoppingListStore.setSelected(
-                    this,
-                    keys,
-                    shouldSelect
-                )
-
-                refreshShoppingData()
-                updateShoppingButtonColors()
-                updateAllNameColors()
-            }
-
 
         return category
     }
@@ -704,6 +680,7 @@ class Complete : AppCompatActivity() {
     ): ItemUi {
 
         val item = ItemUi(
+
             root = root,
             idMap = idMap,
 
@@ -802,6 +779,7 @@ class Complete : AppCompatActivity() {
 
                     updateAllNameColors()
                     updateSaveButton()
+
                 }
             }
         }
@@ -825,7 +803,7 @@ class Complete : AppCompatActivity() {
             }
         }
 
-        // ADD ITEM
+// ADD ITEM
         findInItem<View>(
             item,
             R.id.c_i_add
@@ -868,37 +846,19 @@ class Complete : AppCompatActivity() {
 
                 if (parentGroup != null && parentCategory != null) {
 
+                    if (
+                        isPlaceFullySelected(parentGroup) ||
+                        isCategoryFullySelected(parentGroup, parentCategory)
+                    ) {
+                        return@setOnClickListener
+                    }
+
                     ShoppingListStore.toggle(
                         this,
                         itemKey(parentGroup, parentCategory, item)
                     )
 
-                    refreshShoppingData()
-                    updateShoppingButtonColors()
-                    updateAllNameColors()
-                }
-            }
-
-        findInItem<View>(item, R.id.c_i_add_all_list)
-            ?.setOnClickListener {
-
-                val parentGroup = groups.firstOrNull {
-                    it.categories.contains(category)
-                }
-
-                if (parentGroup != null) {
-
-                    val keys = allKeysInItem(parentGroup, category)
-                    val selected = ShoppingListStore.getSelections(this)
-
-                    val shouldSelect = !keys.all { it in selected }
-
-                    ShoppingListStore.setSelected(
-                        this,
-                        keys,
-                        shouldSelect
-                    )
-
+                    clearAggregateSelectionKeys(parentGroup)
                     refreshShoppingData()
                     updateShoppingButtonColors()
                     updateAllNameColors()
@@ -926,6 +886,7 @@ class Complete : AppCompatActivity() {
         )
 
         val placeholders = listOf(
+
             brand.brandName to "[Brand]",
             brand.nameName to "[Name]",
             brand.weightName to "[Weight]",
@@ -975,6 +936,7 @@ class Complete : AppCompatActivity() {
                     2
                 )
             }
+
         }
 
         brand.quantityName.setOnClickListener {
@@ -1013,7 +975,7 @@ class Complete : AppCompatActivity() {
             item.brandContainer
         ) {}
 
-        // ADD BRAND ROW
+// ADD BRAND ROW
         findInBrand<View>(
             root,
             idMap,
@@ -1042,7 +1004,7 @@ class Complete : AppCompatActivity() {
     }
 
     // EDIT BRAND FIELD
-    // EDIT BRAND FIELD
+// EDIT BRAND FIELD
     private fun editBrandField(
         brand: BrandUi,
         textView: TextView,
@@ -1122,6 +1084,7 @@ class Complete : AppCompatActivity() {
 
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
+
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
@@ -1163,6 +1126,8 @@ class Complete : AppCompatActivity() {
         updateAllNameColors()
         updateSaveButton()
         updateRemoveVisibility(group)
+        refreshShoppingData()
+        updateShoppingButtonColors()
     }
 
     // ADD DUPLICATED ITEM
@@ -1213,12 +1178,15 @@ class Complete : AppCompatActivity() {
         updateAllNameColors()
         updateSaveButton()
         updateRemoveVisibilityForCategory(category)
+        refreshShoppingData()
+        updateShoppingButtonColors()
     }
 
     // ADD DUPLICATED BRAND ROW
     private fun addBrand(
         item: ItemUi,
         afterBrand: BrandUi
+
     ) {
 
         val tempRoot = layoutInflater.inflate(
@@ -1268,6 +1236,7 @@ class Complete : AppCompatActivity() {
         updateAllNameColors()
         updateSaveButton()
         updateRemoveVisibilityForItem(item)
+
     }
 
     private fun clearItem(item: ItemUi) {
@@ -1375,6 +1344,10 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        if (restoreIndex == null) {
+            refreshShoppingData()
+            updateShoppingButtonColors()
+        }
     }
 
 
@@ -1415,6 +1388,7 @@ class Complete : AppCompatActivity() {
 
         val categoryCount = dataPreferences.getInt(
             key("category_count"),
+
             1
         )
 
@@ -1513,6 +1487,7 @@ class Complete : AppCompatActivity() {
                 item.itemExpanded = statePreferences.getBoolean(
                     itemKey("item_expanded"),
                     if (itemIndex == 0) {
+
                         statePreferences.getBoolean(
                             if (categoryIndex == 0) key("item_expanded")
                             else key("category_${categoryIndex}_item_expanded"),
@@ -1562,6 +1537,7 @@ class Complete : AppCompatActivity() {
 
             dataEditor.putString(
                 key("place_name"),
+
                 group.placeName.text.toString()
             )
 
@@ -1685,7 +1661,8 @@ class Complete : AppCompatActivity() {
                         brand.savedBrandName = brand.brandName.text.toString()
                         brand.savedNameName = brand.nameName.text.toString()
                         brand.savedWeightName = brand.weightName.text.toString()
-                        brand.savedQuantityName = brand.quantityName.text.toString()
+                        brand.savedQuantityName =
+                            brand.quantityName.text.toString()
                     }
                 }
             }
@@ -1708,6 +1685,7 @@ class Complete : AppCompatActivity() {
         val editor = statePreferences.edit()
 
         editor.putBoolean(
+
             key("place_expanded"),
             group.placeExpanded
         )
@@ -1726,6 +1704,7 @@ class Complete : AppCompatActivity() {
                     if (categoryIndex == 0) key("item_expanded")
                     else key("category_${categoryIndex}_item_expanded")
                 } else {
+
                     key("category_${categoryIndex}_item_${itemIndex}_item_expanded")
                 }
 
@@ -1805,6 +1784,7 @@ class Complete : AppCompatActivity() {
         )
 
         return category.root.findViewById(actualId)
+
     }
 
     private fun <T : View> findInCategory(
@@ -1903,6 +1883,7 @@ class Complete : AppCompatActivity() {
             for (item in category.items) {
 
                 findInItem<TextView>(
+
                     item,
                     R.id.a_i_expand
                 )?.let { view ->
@@ -2039,7 +2020,7 @@ class Complete : AppCompatActivity() {
             return
         }
 
-        // NORMAL EXPANSION
+// NORMAL EXPANSION
 
         group.root.visibility = View.VISIBLE
 
@@ -2089,7 +2070,8 @@ class Complete : AppCompatActivity() {
     }
 
 
-    // UPDATE EDIT VISIBILITY
+// UPDATE EDIT VISIBILITY
+
     private fun updateEditVisibility() {
 
         for (group in groups) {
@@ -2098,6 +2080,7 @@ class Complete : AppCompatActivity() {
                 if (editMode) View.VISIBLE else View.GONE
 
             findInGroup<View>(
+
                 group,
                 R.id.c_p_sort
             )?.visibility =
@@ -2147,6 +2130,7 @@ class Complete : AppCompatActivity() {
             )?.visibility =
                 if (placeVisibility == View.VISIBLE && groups.size > 1) {
                     View.VISIBLE
+
                 } else {
                     View.GONE
                 }
@@ -2161,16 +2145,6 @@ class Complete : AppCompatActivity() {
                 findInCategory<View>(
                     category,
                     R.id.c_c_sort
-                )?.visibility =
-                    if (editMode && group.categories.indexOf(category) == 0) {
-                        View.VISIBLE
-                    } else {
-                        View.GONE
-                    }
-
-                findInCategory<View>(
-                    category,
-                    R.id.c_c_add_all_list
                 )?.visibility =
                     if (editMode && group.categories.indexOf(category) == 0) {
                         View.VISIBLE
@@ -2206,7 +2180,9 @@ class Complete : AppCompatActivity() {
                     category,
                     R.id.c_c_remove
                 )?.visibility =
-                    if (categoryVisibility == View.VISIBLE && group.categories.size > 1) {
+
+                    if (categoryVisibility == View.VISIBLE &&
+                        group.categories.size > 1) {
                         View.VISIBLE
                     } else {
                         View.GONE
@@ -2215,15 +2191,7 @@ class Complete : AppCompatActivity() {
                 findInCategory<View>(
                     category,
                     R.id.c_c_add_list
-                )?.visibility =
-                    if (
-                        categoryVisibility == View.VISIBLE &&
-                        !isPlaceLocked(group)
-                    ) {
-                        View.VISIBLE
-                    } else {
-                        View.GONE
-                    }
+                )?.visibility = categoryVisibility
 
                 for (item in category.items) {
 
@@ -2249,20 +2217,6 @@ class Complete : AppCompatActivity() {
                             View.GONE
                         }
 
-                    findInItem<View>(
-                        item,
-                        R.id.c_i_add_all_list
-                    )?.visibility =
-                        if (
-                            editMode &&
-                            category.items.indexOf(item) == 0 &&
-                            category.items.size > 1
-                        ) {
-                            View.VISIBLE
-                        } else {
-                            View.GONE
-                        }
-
                     val itemVisibility =
                         if (editMode && item.itemEditExpanded) {
                             View.VISIBLE
@@ -2276,10 +2230,12 @@ class Complete : AppCompatActivity() {
                     )?.visibility = itemVisibility
 
                     findInItem<View>(
+
                         item,
                         R.id.c_i_remove
                     )?.visibility =
-                        if (itemVisibility == View.VISIBLE && category.items.size > 1) {
+                        if (itemVisibility == View.VISIBLE &&
+                            category.items.size > 1) {
                             View.VISIBLE
                         } else {
                             View.GONE
@@ -2288,16 +2244,7 @@ class Complete : AppCompatActivity() {
                     findInItem<View>(
                         item,
                         R.id.c_i_add_list
-                    )?.visibility =
-                        if (
-                            itemVisibility == View.VISIBLE &&
-                            !isPlaceLocked(group) &&
-                            !isCategoryLocked(group, category)
-                        ) {
-                            View.VISIBLE
-                        } else {
-                            View.GONE
-                        }
+                    )?.visibility = itemVisibility
 
                     for (brand in item.brands) {
 
@@ -2324,6 +2271,8 @@ class Complete : AppCompatActivity() {
     }
 
 
+
+
     // EDIT NAME INLINE
     private fun editName(
         textView: TextView,
@@ -2332,6 +2281,7 @@ class Complete : AppCompatActivity() {
         keyboardType: Int = InputType.TYPE_CLASS_TEXT or
                 InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
                 InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+
         onChanged: (Boolean) -> Unit
     ) {
 
@@ -2381,6 +2331,7 @@ class Complete : AppCompatActivity() {
 
             override fun onTextChanged(
                 s: CharSequence?,
+
                 start: Int,
                 before: Int,
                 count: Int
@@ -2505,12 +2456,14 @@ class Complete : AppCompatActivity() {
                     )
 
                     brand.weightName.setTextColor(
-                        if (!itemLocked && editMode && brand.weightChanged) muted
+                        if (!itemLocked && editMode && brand.weightChanged)
+                            muted
                         else brandColor
                     )
 
                     brand.quantityName.setTextColor(
-                        if (!itemLocked && editMode && brand.quantityChanged) muted
+                        if (!itemLocked && editMode && brand.quantityChanged)
+                            muted
                         else brandColor
                     )
                 }
@@ -2575,6 +2528,7 @@ class Complete : AppCompatActivity() {
 
                                                 brand.brandChanged ||
                                                         brand.nameChanged ||
+
                                                         brand.weightChanged ||
                                                         brand.quantityChanged
                                             }
@@ -2647,7 +2601,8 @@ class Complete : AppCompatActivity() {
                     }
 
                     // Ignore completely empty rows when checking duplicates.
-                    val filledCombinations = brandCombinations.filter { values ->
+                    val filledCombinations = brandCombinations.filter { values
+                        ->
                         values.any { it.isNotEmpty() }
                     }
 
@@ -2672,6 +2627,7 @@ class Complete : AppCompatActivity() {
         val canSave =
             editMode &&
                     hasChanges() &&
+
                     allNamesFilled
 
         editButton.text =
@@ -2721,6 +2677,7 @@ class Complete : AppCompatActivity() {
         nameView.setOnLongClickListener {
 
             if (!editMode) {
+
                 return@setOnLongClickListener false
             }
 
@@ -2770,6 +2727,7 @@ class Complete : AppCompatActivity() {
                     val payload = event.localState as? DragPayload
 
                     if (payload == null || payload.parent !== parent) {
+
                         return@setOnDragListener false
                     }
 
@@ -2842,7 +2800,7 @@ class Complete : AppCompatActivity() {
     }
 
     // SORT VIEWS
-    // REORDER VIEWS
+// REORDER VIEWS
     private fun reorderViews(
         parent: ViewGroup,
         orderedViews: List<View>
@@ -2966,6 +2924,7 @@ class Complete : AppCompatActivity() {
 
         val changed = sortedItems.indices.any {
             sortedItems[it] !== category.items[it]
+
         }
 
         if (!changed) return
@@ -3015,6 +2974,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+
     }
 
     // REMOVE BRAND
@@ -3045,19 +3005,13 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
     }
 
-    // SHOPPING LIST SELECTION
+// SHOPPING LIST SELECTION
 
     private fun placeKey(group: GroupUi): String {
-        return ShoppingListStore.path(
-            "P",
-            group.placeName.text.toString()
-        )
+        return ShoppingListStore.path("P", group.placeName.text.toString())
     }
 
-    private fun categoryKey(
-        group: GroupUi,
-        category: CategoryUi
-    ): String {
+    private fun categoryKey(group: GroupUi, category: CategoryUi): String {
         return ShoppingListStore.path(
             "C",
             group.placeName.text.toString(),
@@ -3078,90 +3032,64 @@ class Complete : AppCompatActivity() {
         )
     }
 
-    // ALL ENTRIES UNDER ONE PLACE
-
-    private fun allKeysInPlace(group: GroupUi): List<String> {
-
-        val keys = mutableListOf<String>()
-
-        keys.add(placeKey(group))
-
-        for (category in group.categories) {
-
-            keys.add(categoryKey(group, category))
-
-            for (item in category.items) {
-                keys.add(itemKey(group, category, item))
-            }
-        }
-
-        return keys
+    private fun allItemKeysInCategory(
+        group: GroupUi,
+        category: CategoryUi
+    ): List<String> {
+        return category.items.map { item -> itemKey(group, category, item) }
     }
 
-    // ALL PLACES, CATEGORIES, AND ITEMS
-
-    private fun allKeysInShoppingList(): List<String> {
-        return groups.flatMap { allKeysInPlace(it) }
-    }
-
-    // ALL CATEGORIES AND ITEMS UNDER ONE PLACE
-
-    private fun allKeysInGroup(group: GroupUi): List<String> {
-
+    private fun allItemKeysInPlace(group: GroupUi): List<String> {
         return group.categories.flatMap { category ->
-            allKeysInCategory(group, category)
+            allItemKeysInCategory(group, category)
         }
     }
 
-    // ONE CATEGORY AND ITS ITEMS
+    private fun allItemKeysInShoppingList(): List<String> {
+        return groups.flatMap { group -> allItemKeysInPlace(group) }
+    }
 
-    private fun allKeysInCategory(
+    private fun clearAggregateSelectionKeys(group: GroupUi) {
+        val keys = mutableListOf(placeKey(group))
+        for (category in group.categories) {
+            keys.add(categoryKey(group, category))
+        }
+        ShoppingListStore.setSelected(this, keys, false)
+    }
+
+    private fun clearAllAggregateSelectionKeys() {
+        for (group in groups) {
+            clearAggregateSelectionKeys(group)
+        }
+    }
+
+    private fun isPlaceFullySelected(group: GroupUi): Boolean {
+        val keys = allItemKeysInPlace(group)
+        if (keys.isEmpty()) return false
+        val selected = ShoppingListStore.getSelections(this)
+        return keys.all { it in selected }
+    }
+
+    private fun isCategoryFullySelected(
         group: GroupUi,
         category: CategoryUi
-    ): List<String> {
-
-        val keys = mutableListOf<String>()
-
-        keys.add(categoryKey(group, category))
-
-        for (item in category.items) {
-            keys.add(itemKey(group, category, item))
-        }
-
-        return keys
+    ): Boolean {
+        val keys = allItemKeysInCategory(group, category)
+        if (keys.isEmpty()) return false
+        val selected = ShoppingListStore.getSelections(this)
+        return keys.all { it in selected }
     }
-
-    // ALL ITEMS UNDER ONE CATEGORY
-
-    private fun allKeysInItem(
-        group: GroupUi,
-        category: CategoryUi
-    ): List<String> {
-
-        return category.items.map { item ->
-            itemKey(group, category, item)
-        }
-    }
-
-    // SELECTION STATES
 
     private fun isPlaceLocked(group: GroupUi): Boolean {
-
-        val selected = ShoppingListStore.getSelections(this)
-        val keys = allKeysInPlace(group)
-
-        return keys.isNotEmpty() && keys.all { it in selected }
+        return isPlaceFullySelected(group)
     }
 
     private fun isCategoryLocked(
         group: GroupUi,
         category: CategoryUi
     ): Boolean {
-
-        val selected = ShoppingListStore.getSelections(this)
-        val keys = allKeysInCategory(group, category)
-
-        return keys.isNotEmpty() && keys.all { it in selected }
+        return isPlaceFullySelected(group) ||
+                isCategoryFullySelected(group, category)
     }
 
     private fun isItemLocked(
@@ -3169,11 +3097,9 @@ class Complete : AppCompatActivity() {
         category: CategoryUi,
         item: ItemUi
     ): Boolean {
-
         val selected = ShoppingListStore.getSelections(this)
-
-        return placeKey(group) in selected ||
-                categoryKey(group, category) in selected ||
+        return isPlaceFullySelected(group) ||
+                isCategoryFullySelected(group, category) ||
                 itemKey(group, category, item) in selected
     }
 
@@ -3183,105 +3109,64 @@ class Complete : AppCompatActivity() {
         val result = org.json.JSONArray()
 
         for (group in groups) {
-
             val place = group.placeName.text.toString()
-
             if (place.isBlank()) continue
 
-            val placeSelected = placeKey(group) in selected
-
+            val placeSelected = isPlaceFullySelected(group)
             val placeObject = org.json.JSONObject()
             placeObject.put("place", place)
-
             val categoriesArray = org.json.JSONArray()
-
             var hasSelectedContent = false
 
             for (category in group.categories) {
-
                 val categoryName = category.categoryName.text.toString()
-
                 if (categoryName.isBlank()) continue
 
-                val categorySelected =
-                    placeSelected ||
-                            categoryKey(group, category) in selected
-
+                val categorySelected = isCategoryFullySelected(group, category)
                 val categoryObject = org.json.JSONObject()
                 categoryObject.put("category", categoryName)
-
                 val itemsArray = org.json.JSONArray()
 
                 for (item in category.items) {
-
                     val itemName = item.itemName.text.toString()
-
                     if (itemName.isBlank()) continue
 
-                    val itemSelected =
-                        categorySelected ||
-                                itemKey(group, category, item) in selected
-
+                    val itemSelected = itemKey(group, category, item) in selected
                     if (!itemSelected) continue
 
                     val itemObject = org.json.JSONObject()
                     itemObject.put("item", itemName)
-
                     val brandsArray = org.json.JSONArray()
 
                     for (brand in item.brands) {
-
                         if (
                             brand.brandName.text.isBlank() &&
                             brand.nameName.text.isBlank() &&
                             brand.weightName.text.isBlank() &&
                             brand.quantityName.text.isBlank()
-                        ) {
-                            continue
-                        }
+                        ) continue
 
                         val brandObject = org.json.JSONObject()
-
-                        brandObject.put(
-                            "brand",
-                            brand.brandName.text.toString()
-                        )
-
-                        brandObject.put(
-                            "name",
-                            brand.nameName.text.toString()
-                        )
-
-                        brandObject.put(
-                            "weight",
-                            brand.weightName.text.toString()
-                        )
-
-                        brandObject.put(
-                            "quantity",
-                            brand.quantityName.text.toString()
-                        )
-
+                        brandObject.put("brand", brand.brandName.text.toString())
+                        brandObject.put("name", brand.nameName.text.toString())
+                        brandObject.put("weight", brand.weightName.text.toString())
+                        brandObject.put("quantity", brand.quantityName.text.toString())
                         brandsArray.put(brandObject)
                     }
 
                     itemObject.put("brands", brandsArray)
-
                     itemsArray.put(itemObject)
                     hasSelectedContent = true
                 }
 
                 if (categorySelected || itemsArray.length() > 0) {
-
                     categoryObject.put("items", itemsArray)
                     categoriesArray.put(categoryObject)
-
                     hasSelectedContent = true
                 }
             }
 
             if (placeSelected || hasSelectedContent) {
-
                 placeObject.put("categories", categoriesArray)
                 result.put(placeObject)
             }
@@ -3292,79 +3177,93 @@ class Complete : AppCompatActivity() {
 
     private fun updateShoppingButtonColors() {
 
+        finishActiveNameEdit()
         val selected = ShoppingListStore.getSelections(this)
+        val dark = Color.rgb(29, 27, 32)
 
-        fun setColor(view: View?, isSelected: Boolean) {
-
+        fun setColor(view: View?, isSelected: Boolean, isDisabled: Boolean = false) {
             val button = view as? AppCompatButton ?: return
-
+            button.isEnabled = !isDisabled
             button.backgroundTintList = ColorStateList.valueOf(
-                if (isSelected) muted else gray
+                when {
+                    isDisabled -> dark
+                    isSelected -> muted
+                    else -> gray
+                }
             )
-
             button.setTextColor(
-                if (isSelected) gray else Color.rgb(29, 27, 32)
+                if (isDisabled || isSelected) gray else dark
             )
         }
 
-        val globalKeys = allKeysInShoppingList()
-
-        val globalSelected =
-            globalKeys.isNotEmpty() &&
-                    globalKeys.all { it in selected }
+        val allKeys = allItemKeysInShoppingList()
+        val globalSelected = allKeys.isNotEmpty() && allKeys.all { it in selected }
 
         for (group in groups) {
+            val placeSelected = isPlaceFullySelected(group)
+            val placeButton = findInGroup<View>(group, R.id.c_p_add_list)
+            setColor(placeButton, placeSelected)
 
-            setColor(
-                findInGroup(group, R.id.c_p_add_list),
-                isPlaceLocked(group)
-            )
+            val placeRemove = findInGroup<View>(group, R.id.c_p_remove)
+            if (placeSelected) placeRemove?.visibility = View.GONE
 
             setColor(
                 findInGroup(group, R.id.c_p_add_all_list),
                 globalSelected
             )
 
-            val groupKeys = allKeysInGroup(group)
-
-            val groupSelected =
-                groupKeys.isNotEmpty() &&
-                        groupKeys.all { it in selected }
-
             for (category in group.categories) {
-
+                val categorySelected = isCategoryFullySelected(group, category)
+                val categoryDisabled = placeSelected
                 setColor(
                     findInCategory(category, R.id.c_c_add_list),
-                    isCategoryLocked(group, category)
+                    categorySelected,
+                    categoryDisabled
                 )
 
-                setColor(
-                    findInCategory(category, R.id.c_c_add_all_list),
-                    groupSelected
-                )
-
-                val itemKeys = allKeysInItem(group, category)
-
-                val itemsSelected =
-                    itemKeys.isNotEmpty() &&
-                            itemKeys.all { it in selected }
+                val categoryRemove = findInCategory<View>(category, R.id.c_c_remove)
+                if (categorySelected || categoryDisabled) {
+                    categoryRemove?.visibility = View.GONE
+                }
 
                 for (item in category.items) {
-
+                    val itemSelected = itemKey(group, category, item) in selected
+                    val itemDisabled = placeSelected || categorySelected
                     setColor(
                         findInItem(item, R.id.c_i_add_list),
-                        isItemLocked(group, category, item)
+                        itemSelected,
+                        itemDisabled
                     )
 
-                    setColor(
-                        findInItem(item, R.id.c_i_add_all_list),
-                        itemsSelected
-                    )
+                    val itemRemove = findInItem<View>(item, R.id.c_i_remove)
+                    if (itemSelected || itemDisabled) {
+                        itemRemove?.visibility = View.GONE
+                    }
                 }
             }
         }
 
         updateEditVisibility()
+
+        // Reapply selection-dependent hiding after edit visibility is recalculated.
+        for (group in groups) {
+            if (isPlaceFullySelected(group)) {
+                findInGroup<View>(group, R.id.c_p_remove)?.visibility = View.GONE
+            }
+            for (category in group.categories) {
+                val categorySelected = isCategoryFullySelected(group, category)
+                val placeSelected = isPlaceFullySelected(group)
+                if (categorySelected || placeSelected) {
+                    findInCategory<View>(category, R.id.c_c_remove)?.visibility = View.GONE
+                }
+                for (item in category.items) {
+                    val itemSelected = itemKey(group, category, item) in selected
+                    if (itemSelected || categorySelected || placeSelected) {
+                        findInItem<View>(item, R.id.c_i_remove)?.visibility = View.GONE
+                    }
+                }
+            }
+        }
     }
 
     private fun isItemLockedForBrand(item: ItemUi): Boolean {
@@ -3377,8 +3276,27 @@ class Complete : AppCompatActivity() {
 
         val category = group.categories.firstOrNull {
             it.items.contains(item)
+
         } ?: return false
 
         return isItemLocked(group, category, item)
+    }
+
+    private fun finishActiveNameEdit() {
+
+        val focusedView = currentFocus
+
+        if (focusedView is EditText) {
+
+            val token = focusedView.windowToken
+
+            focusedView.clearFocus()
+
+            val keyboard = getSystemService(
+                INPUT_METHOD_SERVICE
+            ) as android.view.inputmethod.InputMethodManager
+
+            keyboard.hideSoftInputFromWindow(token, 0)
+        }
     }
 }
