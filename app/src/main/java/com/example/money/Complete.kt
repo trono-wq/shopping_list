@@ -115,10 +115,44 @@ class Complete : AppCompatActivity() {
 
         val categories: MutableList<CategoryUi> = mutableListOf()
     )
-
     private val groups = mutableListOf<GroupUi>()
 
     private var originalStructure: List<Any> = emptyList()
+
+    private val workingSelections = mutableSetOf<String>()
+    private var savedSelections = mutableSetOf<String>()
+
+    private fun hasSelectionChanges(): Boolean {
+        return workingSelections != savedSelections
+    }
+
+    private fun setWorkingSelected(keys: Collection<String>, selected: Boolean) {
+        if (selected) {
+            workingSelections.addAll(keys)
+
+            android.util.Log.d(
+                "SELECTION_DEBUG",
+                "setWorkingSelected ADD: ${keys.map { ShoppingListStore.parts(it) }}"
+            )
+        } else {
+            workingSelections.removeAll(keys.toSet())
+        }
+
+        updateSaveButton()
+    }
+
+    private fun toggleWorkingSelection(key: String) {
+        if (!workingSelections.add(key)) {
+            workingSelections.remove(key)
+        } else {
+            android.util.Log.d(
+                "SELECTION_DEBUG",
+                "toggleWorkingSelection ADD: ${ShoppingListStore.parts(key)}"
+            )
+        }
+
+        updateSaveButton()
+    }
 
     private fun dp(value: Int): Int {
         return (value * resources.displayMetrics.density).toInt()
@@ -131,6 +165,13 @@ class Complete : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, true)
 
         setContentView(R.layout.complete)
+
+        workingSelections.clear()
+        workingSelections.addAll(
+            ShoppingListStore.getSelections(this)
+        )
+
+        savedSelections = workingSelections.toMutableSet()
 
         window.setBackgroundDrawableResource(android.R.color.black)
         window.statusBarColor = Color.BLACK
@@ -222,6 +263,7 @@ class Complete : AppCompatActivity() {
             updateAllExpansionVisibility()
             updateEditVisibility()
             updateSaveButton()
+            updateSortToggles()
         }
 
         loadGroupData(originalGroup, 0)
@@ -272,12 +314,32 @@ class Complete : AppCompatActivity() {
                 updateEditVisibility()
                 updateAllNameColors()
                 updateSaveButton()
+                updateSortToggles()
 
             } else {
 
                 if (hasChanges() && allRequiredNamesFilled()) {
                     persistAllGroups()
                     updateSavedNames()
+                }
+
+                if (hasSelectionChanges() && allRequiredNamesFilled()) {
+
+                    android.util.Log.d(
+                        "SELECTION_DEBUG",
+                        "Complete saving selections: ${workingSelections.map {
+                            ShoppingListStore.parts(it)
+                        }}"
+                    )
+
+                    ShoppingListStore.saveSelections(
+                        this,
+                        workingSelections
+                    )
+
+                    savedSelections = workingSelections.toMutableSet()
+
+                    refreshShoppingData(persist = true)
                 }
 
                 val imm = getSystemService(
@@ -314,6 +376,7 @@ class Complete : AppCompatActivity() {
                 updateEditVisibility()
                 updateAllNameColors()
                 updateSaveButton()
+                updateSortToggles()
             }
         }
 
@@ -322,6 +385,7 @@ class Complete : AppCompatActivity() {
         updateSaveButton()
         refreshShoppingData()
         updateShoppingButtonColors()
+        updateSortToggles()
     }
 
     // SETUP GROUP
@@ -408,6 +472,7 @@ class Complete : AppCompatActivity() {
             updateAllExpansionVisibility()
             updateEditVisibility()
             updateSaveButton()
+            updateSortToggles()
         }
 
         findInGroup<View>(
@@ -445,6 +510,7 @@ class Complete : AppCompatActivity() {
 
                     updateAllNameColors()
                     updateSaveButton()
+                    updateSortToggles()
                 }
             }
         }
@@ -496,11 +562,12 @@ class Complete : AppCompatActivity() {
             ?.setOnClickListener {
 
                 val keys = allItemKeysInPlace(group)
-                val selected = ShoppingListStore.getSelections(this)
+                val selected = workingSelections
                 val shouldSelect = keys.isNotEmpty() && !keys.all { it in selected }
 
                 clearAggregateSelectionKeys(group)
-                ShoppingListStore.setSelected(this, keys, shouldSelect)
+                android.util.Log.d("SELECTION_DEBUG", "CALLER: c_p_add_list - ${group.placeName.text}")
+                setWorkingSelected(keys, shouldSelect)
 
                 refreshShoppingData()
                 updateShoppingButtonColors()
@@ -511,11 +578,12 @@ class Complete : AppCompatActivity() {
             ?.setOnClickListener {
 
                 val keys = allItemKeysInShoppingList()
-                val selected = ShoppingListStore.getSelections(this)
+                val selected = workingSelections
                 val shouldSelect = keys.isNotEmpty() && !keys.all { it in selected }
 
                 clearAllAggregateSelectionKeys()
-                ShoppingListStore.setSelected(this, keys, shouldSelect)
+                android.util.Log.d("SELECTION_DEBUG", "CALLER: c_p_add_all_list")
+                setWorkingSelected(keys, shouldSelect)
 
                 refreshShoppingData()
                 updateShoppingButtonColors()
@@ -572,6 +640,7 @@ class Complete : AppCompatActivity() {
             updateAllExpansionVisibility()
             updateEditVisibility()
             updateSaveButton()
+            updateSortToggles()
         }
 
         findInCategory<View>(
@@ -612,6 +681,7 @@ class Complete : AppCompatActivity() {
 
                     updateAllNameColors()
                     updateSaveButton()
+                    updateSortToggles()
                 }
             }
         }
@@ -658,11 +728,15 @@ class Complete : AppCompatActivity() {
                 if (isPlaceFullySelected(group)) return@setOnClickListener
 
                 val keys = allItemKeysInCategory(group, category)
-                val selected = ShoppingListStore.getSelections(this)
+                val selected = workingSelections
                 val shouldSelect = keys.isNotEmpty() && !keys.all { it in selected }
 
                 clearAggregateSelectionKeys(group)
-                ShoppingListStore.setSelected(this, keys, shouldSelect)
+                android.util.Log.d(
+                    "SELECTION_DEBUG",
+                    "CALLER: c_c_add_list - ${category.categoryName.text}"
+                )
+                setWorkingSelected(keys, shouldSelect)
 
                 refreshShoppingData()
                 updateShoppingButtonColors()
@@ -721,6 +795,7 @@ class Complete : AppCompatActivity() {
             structureChanged = true
             updateEditVisibility()
             updateSaveButton()
+            updateSortToggles()
         }
 
         findInItem<View>(
@@ -779,6 +854,7 @@ class Complete : AppCompatActivity() {
 
                     updateAllNameColors()
                     updateSaveButton()
+                    updateSortToggles()
 
                 }
             }
@@ -853,8 +929,7 @@ class Complete : AppCompatActivity() {
                         return@setOnClickListener
                     }
 
-                    ShoppingListStore.toggle(
-                        this,
+                    toggleWorkingSelection(
                         itemKey(parentGroup, parentCategory, item)
                     )
 
@@ -1037,6 +1112,7 @@ class Complete : AppCompatActivity() {
 
             updateAllNameColors()
             updateSaveButton()
+            updateSortToggles()
         }
     }
 
@@ -1125,6 +1201,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
         updateRemoveVisibility(group)
         refreshShoppingData()
         updateShoppingButtonColors()
@@ -1177,6 +1254,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
         updateRemoveVisibilityForCategory(category)
         refreshShoppingData()
         updateShoppingButtonColors()
@@ -1235,6 +1313,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
         updateRemoveVisibilityForItem(item)
 
     }
@@ -1344,6 +1423,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
         if (restoreIndex == null) {
             refreshShoppingData()
             updateShoppingButtonColors()
@@ -1974,8 +2054,12 @@ class Complete : AppCompatActivity() {
 
                     val matchesEntry = itemMatches[item] == true
 
+                    val hasMatchingItemOrBrand = itemMatches.values.any { it }
+
                     val showChildren =
-                        categoryVisible && category.categoryExpanded
+                        categoryVisible &&
+                                category.categoryExpanded &&
+                                !hasMatchingItemOrBrand
 
                     val itemVisible =
                         matchesEntry || showChildren
@@ -2074,6 +2158,10 @@ class Complete : AppCompatActivity() {
 
     private fun updateEditVisibility() {
 
+        val selected = workingSelections
+        val allKeys = allItemKeysInShoppingList()
+        val globalSelected = allKeys.isNotEmpty() && allKeys.all { it in selected }
+
         for (group in groups) {
 
             val mainVisibility =
@@ -2128,9 +2216,10 @@ class Complete : AppCompatActivity() {
                 group,
                 R.id.c_p_remove
             )?.visibility =
-                if (placeVisibility == View.VISIBLE && groups.size > 1) {
+                if (placeVisibility == View.VISIBLE &&
+                    groups.size > 1 &&
+                    !isPlaceFullySelected(group)) {
                     View.VISIBLE
-
                 } else {
                     View.GONE
                 }
@@ -2138,7 +2227,12 @@ class Complete : AppCompatActivity() {
             findInGroup<View>(
                 group,
                 R.id.c_p_add_list
-            )?.visibility = placeVisibility
+            )?.visibility =
+                if (placeVisibility == View.VISIBLE && !globalSelected) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
 
             for (category in group.categories) {
 
@@ -2180,9 +2274,10 @@ class Complete : AppCompatActivity() {
                     category,
                     R.id.c_c_remove
                 )?.visibility =
-
                     if (categoryVisibility == View.VISIBLE &&
-                        group.categories.size > 1) {
+                        group.categories.size > 1 &&
+                        !isCategoryFullySelected(group, category) &&
+                        !isPlaceFullySelected(group)) {
                         View.VISIBLE
                     } else {
                         View.GONE
@@ -2191,7 +2286,13 @@ class Complete : AppCompatActivity() {
                 findInCategory<View>(
                     category,
                     R.id.c_c_add_list
-                )?.visibility = categoryVisibility
+                )?.visibility =
+                    if (categoryVisibility == View.VISIBLE &&
+                        !isPlaceFullySelected(group)) {
+                        View.VISIBLE
+                    } else {
+                        View.GONE
+                    }
 
                 for (item in category.items) {
 
@@ -2229,13 +2330,17 @@ class Complete : AppCompatActivity() {
                         R.id.c_i_add
                     )?.visibility = itemVisibility
 
-                    findInItem<View>(
+                    val itemSelected = itemKey(group, category, item) in selected
 
+                    findInItem<View>(
                         item,
                         R.id.c_i_remove
                     )?.visibility =
                         if (itemVisibility == View.VISIBLE &&
-                            category.items.size > 1) {
+                            category.items.size > 1 &&
+                            !itemSelected &&
+                            !isCategoryFullySelected(group, category) &&
+                            !isPlaceFullySelected(group)) {
                             View.VISIBLE
                         } else {
                             View.GONE
@@ -2244,7 +2349,14 @@ class Complete : AppCompatActivity() {
                     findInItem<View>(
                         item,
                         R.id.c_i_add_list
-                    )?.visibility = itemVisibility
+                    )?.visibility =
+                        if (itemVisibility == View.VISIBLE &&
+                            !isCategoryFullySelected(group, category) &&
+                            !isPlaceFullySelected(group)) {
+                            View.VISIBLE
+                        } else {
+                            View.GONE
+                        }
 
                     for (brand in item.brands) {
 
@@ -2515,7 +2627,7 @@ class Complete : AppCompatActivity() {
     // CHECK CHANGES
     private fun hasChanges(): Boolean {
 
-        return structureChanged || groups.any { group ->
+        return hasStructureChanged() || groups.any { group ->
 
             group.placeChanged ||
                     group.categories.any { category ->
@@ -2528,7 +2640,6 @@ class Complete : AppCompatActivity() {
 
                                                 brand.brandChanged ||
                                                         brand.nameChanged ||
-
                                                         brand.weightChanged ||
                                                         brand.quantityChanged
                                             }
@@ -2626,8 +2737,7 @@ class Complete : AppCompatActivity() {
 
         val canSave =
             editMode &&
-                    hasChanges() &&
-
+                    (hasChanges() || hasSelectionChanges()) &&
                     allNamesFilled
 
         editButton.text =
@@ -2657,6 +2767,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
     }
 
     // DRAG PAYLOAD
@@ -2704,21 +2815,20 @@ class Complete : AppCompatActivity() {
 
 
     // ENABLE LIST DRAGGING
+
+
     private fun <T> enableListDragging(
         parent: ViewGroup,
         entries: MutableList<T>,
         rootOf: (T) -> View,
         onReordered: () -> Unit
     ) {
-
         parent.setOnDragListener { _, event ->
 
             when (event.action) {
 
                 android.view.DragEvent.ACTION_DRAG_STARTED -> {
-
                     val payload = event.localState as? DragPayload
-
                     payload?.parent === parent
                 }
 
@@ -2727,15 +2837,11 @@ class Complete : AppCompatActivity() {
                     val payload = event.localState as? DragPayload
 
                     if (payload == null || payload.parent !== parent) {
-
                         return@setOnDragListener false
                     }
 
                     val draggedView = payload.draggedView
-
-                    val currentViews = entries.map {
-                        rootOf(it)
-                    }
+                    val currentViews = entries.map { rootOf(it) }
 
                     if (!currentViews.contains(draggedView)) {
                         return@setOnDragListener false
@@ -2746,15 +2852,11 @@ class Complete : AppCompatActivity() {
                     }
 
                     val firstEntryTop = remainingViews.firstOrNull()?.top ?: 0
-
                     val dropY = event.y.coerceAtLeast(firstEntryTop.toFloat())
 
                     val insertIndex = remainingViews.indexOfFirst { child ->
-
                         dropY < child.top + child.height / 2f
-
                     }.let { index ->
-
                         if (index < 0) remainingViews.size else index
                     }
 
@@ -2763,10 +2865,7 @@ class Complete : AppCompatActivity() {
                     }
 
                     val orderedEntries = orderedViews.mapNotNull { view ->
-
-                        entries.firstOrNull {
-                            rootOf(it) === view
-                        }
+                        entries.firstOrNull { rootOf(it) === view }
                     }
 
                     if (orderedEntries.size == entries.size) {
@@ -2780,12 +2879,10 @@ class Complete : AppCompatActivity() {
                             entries.clear()
                             entries.addAll(orderedEntries)
 
-                            reorderViews(
-                                parent,
-                                orderedViews
-                            )
+                            reorderViews(parent, orderedViews)
 
                             onReordered()
+                            updateSortToggles()
                         }
                     }
 
@@ -2798,6 +2895,7 @@ class Complete : AppCompatActivity() {
             }
         }
     }
+
 
     // SORT VIEWS
 // REORDER VIEWS
@@ -2857,7 +2955,10 @@ class Complete : AppCompatActivity() {
             sortedGroups[it] !== groups[it]
         }
 
-        if (!changed) return
+        if (!changed) {
+            updateSortToggles()
+            return
+        }
 
         groups.clear()
         groups.addAll(sortedGroups)
@@ -2873,6 +2974,7 @@ class Complete : AppCompatActivity() {
         updateAllExpansionVisibility()
         updateEditVisibility()
         updateSaveButton()
+        updateSortToggles()
     }
 
     // SORT CATEGORIES
@@ -2892,7 +2994,10 @@ class Complete : AppCompatActivity() {
             sortedCategories[it] !== group.categories[it]
         }
 
-        if (!changed) return
+        if (!changed) {
+            updateSortToggles()
+            return
+        }
 
         group.categories.clear()
         group.categories.addAll(sortedCategories)
@@ -2907,6 +3012,7 @@ class Complete : AppCompatActivity() {
         updateAllExpansionVisibility()
         updateEditVisibility()
         updateSaveButton()
+        updateSortToggles()
     }
 
     // SORT ITEMS
@@ -2927,7 +3033,10 @@ class Complete : AppCompatActivity() {
 
         }
 
-        if (!changed) return
+        if (!changed) {
+            updateSortToggles()
+            return
+        }
 
         category.items.clear()
         category.items.addAll(sortedItems)
@@ -2942,6 +3051,7 @@ class Complete : AppCompatActivity() {
         updateAllExpansionVisibility()
         updateEditVisibility()
         updateSaveButton()
+        updateSortToggles()
     }
 
     // REMOVE CATEGORY
@@ -2958,6 +3068,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
     }
 
     // REMOVE ITEM
@@ -2974,6 +3085,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
 
     }
 
@@ -2990,6 +3102,7 @@ class Complete : AppCompatActivity() {
         updateEditVisibility()
         updateAllNameColors()
         updateSaveButton()
+        updateSortToggles()
     }
 
     // UPDATE REMOVE BUTTON VISIBILITY
@@ -3051,10 +3164,12 @@ class Complete : AppCompatActivity() {
 
     private fun clearAggregateSelectionKeys(group: GroupUi) {
         val keys = mutableListOf(placeKey(group))
+
         for (category in group.categories) {
             keys.add(categoryKey(group, category))
         }
-        ShoppingListStore.setSelected(this, keys, false)
+
+        setWorkingSelected(keys, false)
     }
 
     private fun clearAllAggregateSelectionKeys() {
@@ -3066,7 +3181,7 @@ class Complete : AppCompatActivity() {
     private fun isPlaceFullySelected(group: GroupUi): Boolean {
         val keys = allItemKeysInPlace(group)
         if (keys.isEmpty()) return false
-        val selected = ShoppingListStore.getSelections(this)
+        val selected = workingSelections
         return keys.all { it in selected }
     }
 
@@ -3076,7 +3191,7 @@ class Complete : AppCompatActivity() {
     ): Boolean {
         val keys = allItemKeysInCategory(group, category)
         if (keys.isEmpty()) return false
-        val selected = ShoppingListStore.getSelections(this)
+        val selected = workingSelections
         return keys.all { it in selected }
     }
 
@@ -3097,15 +3212,15 @@ class Complete : AppCompatActivity() {
         category: CategoryUi,
         item: ItemUi
     ): Boolean {
-        val selected = ShoppingListStore.getSelections(this)
+        val selected = workingSelections
         return isPlaceFullySelected(group) ||
                 isCategoryFullySelected(group, category) ||
                 itemKey(group, category, item) in selected
     }
 
-    private fun refreshShoppingData() {
+    private fun refreshShoppingData(persist: Boolean = false) {
 
-        val selected = ShoppingListStore.getSelections(this)
+        val selected = workingSelections
         val result = org.json.JSONArray()
 
         for (group in groups) {
@@ -3171,28 +3286,27 @@ class Complete : AppCompatActivity() {
                 result.put(placeObject)
             }
         }
-
-        ShoppingListStore.saveShoppingData(this, result)
+        if (persist) {
+            ShoppingListStore.saveShoppingData(this, result)
+        }
     }
 
     private fun updateShoppingButtonColors() {
 
         finishActiveNameEdit()
-        val selected = ShoppingListStore.getSelections(this)
+        val selected = workingSelections
         val dark = Color.rgb(29, 27, 32)
 
         fun setColor(view: View?, isSelected: Boolean, isDisabled: Boolean = false) {
             val button = view as? AppCompatButton ?: return
             button.isEnabled = !isDisabled
+
             button.backgroundTintList = ColorStateList.valueOf(
-                when {
-                    isDisabled -> dark
-                    isSelected -> muted
-                    else -> gray
-                }
+                if (isSelected) muted else gray
             )
+
             button.setTextColor(
-                if (isDisabled || isSelected) gray else dark
+                if (isSelected) gray else dark
             )
         }
 
@@ -3201,8 +3315,10 @@ class Complete : AppCompatActivity() {
 
         for (group in groups) {
             val placeSelected = isPlaceFullySelected(group)
+            val placeDisabled = globalSelected
+
             val placeButton = findInGroup<View>(group, R.id.c_p_add_list)
-            setColor(placeButton, placeSelected)
+            setColor(placeButton, placeSelected, placeDisabled)
 
             val placeRemove = findInGroup<View>(group, R.id.c_p_remove)
             if (placeSelected) placeRemove?.visibility = View.GONE
@@ -3245,19 +3361,36 @@ class Complete : AppCompatActivity() {
 
         updateEditVisibility()
 
-        // Reapply selection-dependent hiding after edit visibility is recalculated.
+// Hide disabled Add to List buttons without forcing enabled buttons visible.
         for (group in groups) {
-            if (isPlaceFullySelected(group)) {
+            val placeSelected = isPlaceFullySelected(group)
+
+            if (globalSelected) {
+                findInGroup<View>(group, R.id.c_p_add_list)?.visibility = View.GONE
+            }
+
+            if (placeSelected) {
                 findInGroup<View>(group, R.id.c_p_remove)?.visibility = View.GONE
             }
+
             for (category in group.categories) {
                 val categorySelected = isCategoryFullySelected(group, category)
-                val placeSelected = isPlaceFullySelected(group)
+
+                if (placeSelected) {
+                    findInCategory<View>(category, R.id.c_c_add_list)?.visibility = View.GONE
+                }
+
                 if (categorySelected || placeSelected) {
                     findInCategory<View>(category, R.id.c_c_remove)?.visibility = View.GONE
                 }
+
                 for (item in category.items) {
                     val itemSelected = itemKey(group, category, item) in selected
+
+                    if (placeSelected || categorySelected) {
+                        findInItem<View>(item, R.id.c_i_add_list)?.visibility = View.GONE
+                    }
+
                     if (itemSelected || categorySelected || placeSelected) {
                         findInItem<View>(item, R.id.c_i_remove)?.visibility = View.GONE
                     }
@@ -3299,4 +3432,104 @@ class Complete : AppCompatActivity() {
             keyboard.hideSoftInputFromWindow(token, 0)
         }
     }
+
+    override fun onStop() {
+        super.onStop()
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        android.util.Log.d(
+            "SELECTION_DEBUG",
+            "ONSTART BEFORE: ${workingSelections.map { ShoppingListStore.parts(it) }}"
+        )
+
+        workingSelections.clear()
+        workingSelections.addAll(
+            ShoppingListStore.getSelections(this)
+        )
+
+        savedSelections = workingSelections.toMutableSet()
+
+        android.util.Log.d(
+            "SELECTION_DEBUG",
+            "ONSTART AFTER: ${workingSelections.map { ShoppingListStore.parts(it) }}"
+        )
+
+        updateShoppingButtonColors()
+        updateAllNameColors()
+        updateSaveButton()
+        updateSortToggles()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        updateShoppingButtonColors()
+        updateAllNameColors()
+        updateSaveButton()
+        updateSortToggles()
+    }
+
+    private fun isAlphabetical(names: List<String>): Boolean {
+
+        val sortedNames = names.sortedWith(
+            compareBy<String> {
+                if (it.isBlank()) 0 else 1
+            }.thenBy {
+                it.trim().lowercase(Locale.ROOT)
+            }
+        )
+
+        return names == sortedNames
+    }
+
+    private fun updateSortToggles() {
+
+        // PLACES
+        groups.firstOrNull()?.let { firstGroup ->
+
+            findInGroup<androidx.appcompat.widget.SwitchCompat>(
+                firstGroup,
+                R.id.c_p_sort
+            )?.isChecked = isAlphabetical(
+                groups.map { it.placeName.text.toString() }
+            )
+        }
+
+        // CATEGORIES
+        for (group in groups) {
+
+            group.categories.firstOrNull()?.let { firstCategory ->
+
+                findInCategory<androidx.appcompat.widget.SwitchCompat>(
+                    firstCategory,
+                    R.id.c_c_sort
+                )?.isChecked = isAlphabetical(
+                    group.categories.map {
+                        it.categoryName.text.toString()
+                    }
+                )
+            }
+
+            // ITEMS
+            for (category in group.categories) {
+
+                category.items.firstOrNull()?.let { firstItem ->
+
+                    findInItem<androidx.appcompat.widget.SwitchCompat>(
+                        firstItem,
+                        R.id.c_i_sort
+                    )?.isChecked = isAlphabetical(
+                        category.items.map {
+                            it.itemName.text.toString()
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+
 }

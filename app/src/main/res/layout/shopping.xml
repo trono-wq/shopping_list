@@ -109,8 +109,8 @@
                 android:textSize="15sp"/>
 
             <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/c_edit"
-                android:text="@string/c_edit"
+                android:id="@+id/s_edit"
+                android:text="@string/s_edit"
 
                 android:layout_width="wrap_content"
                 android:layout_height="50dp"

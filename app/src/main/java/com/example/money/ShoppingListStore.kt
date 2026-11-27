@@ -99,4 +99,82 @@ object ShoppingListStore {
             JSONArray()
         }
     }
+
+    fun deleteSelectedShoppingData(
+        context: Context,
+        selectedKeys: Set<String>
+    ) {
+        val data = getShoppingData(context)
+        val savedSelections = getSelections(context)
+
+        for (i in data.length() - 1 downTo 0) {
+            val place = data.optJSONObject(i) ?: continue
+            val placeName = place.optString("place")
+
+            val placeKey = path("P", placeName)
+
+            if (placeKey in selectedKeys) {
+                // Delete the Place and every saved selection under it.
+                savedSelections.removeAll {
+                    parts(it).getOrNull(1) == placeName
+                }
+
+                data.remove(i)
+                continue
+            }
+
+            val categories = place.optJSONArray("categories") ?: JSONArray()
+
+            for (j in categories.length() - 1 downTo 0) {
+                val category = categories.optJSONObject(j) ?: continue
+                val categoryName = category.optString("category")
+
+                val categoryKey = path("C", placeName, categoryName)
+
+                if (categoryKey in selectedKeys) {
+                    // Delete the Category and its saved selections.
+                    savedSelections.removeAll {
+                        val keyParts = parts(it)
+
+                        keyParts.getOrNull(1) == placeName &&
+                                keyParts.getOrNull(2) == categoryName
+                    }
+
+                    categories.remove(j)
+                    continue
+                }
+
+                val items = category.optJSONArray("items") ?: JSONArray()
+
+                for (k in items.length() - 1 downTo 0) {
+                    val item = items.optJSONObject(k) ?: continue
+                    val itemName = item.optString("item")
+
+                    val itemKey = path(
+                        "I",
+                        placeName,
+                        categoryName,
+                        itemName
+                    )
+
+                    if (itemKey in selectedKeys) {
+                        // Delete the Item and its saved selection.
+                        savedSelections.removeAll {
+                            val keyParts = parts(it)
+
+                            keyParts.getOrNull(1) == placeName &&
+                                    keyParts.getOrNull(2) == categoryName &&
+                                    keyParts.getOrNull(3) == itemName
+                        }
+
+                        items.remove(k)
+                    }
+                }
+            }
+        }
+
+        saveShoppingData(context, data)
+        saveSelections(context, savedSelections)
+    }
+
 }
